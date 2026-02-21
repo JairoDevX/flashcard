@@ -1,0 +1,155 @@
+{% extends 'base.html' %}
+{% block title %}Vocabulário – FlashCards{% endblock %}
+
+{% block content %}
+<div class="min-h-screen bg-gradient-to-br from-[#f6f8f6] to-[#ABE5BC]/5 flex flex-col">
+
+  <!-- Header -->
+  <div class="bg-white border-b border-gray-100 px-4 pt-4 pb-2 sticky top-0 z-20">
+    <div class="max-w-xl mx-auto">
+      <div class="flex items-center justify-between mb-4">
+        <h1 class="text-2xl font-black text-gray-900">Vocabulário</h1>
+        <a href="{% url 'deck_list' %}"
+           class="w-9 h-9 flex items-center justify-center rounded-full bg-gray-100 text-gray-600
+                  hover:bg-gray-200 active:scale-95 transition-all text-lg">
+          ←
+        </a>
+      </div>
+
+      <!-- Search -->
+      <form method="get" class="relative mb-4">
+        <svg class="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400"
+             fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round"
+                d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0"/>
+        </svg>
+        <input type="text" name="q" value="{{ search }}"
+               placeholder="Buscar palavra..."
+               class="w-full bg-gray-100 rounded-2xl py-3 pl-10 pr-4 text-sm
+                      focus:ring-2 focus:ring-[#ABE5BC] focus:outline-none transition-all">
+        {% if tag_filter != 'all' %}
+        <input type="hidden" name="tag" value="{{ tag_filter }}">
+        {% endif %}
+      </form>
+
+      <!-- Filter chips -->
+      <div class="flex gap-2 overflow-x-auto pb-2 scrollbar-none">
+        <a href="?{% if search %}q={{ search }}&{% endif %}tag=all"
+           class="whitespace-nowrap px-4 py-1.5 rounded-full text-sm font-bold transition-all
+                  {% if tag_filter == 'all' %}bg-[#4abe74] text-white shadow-sm shadow-[#4abe74]/20
+                  {% else %}bg-gray-100 text-gray-500 hover:bg-gray-200{% endif %}">
+          Todos
+        </a>
+        <a href="?{% if search %}q={{ search }}&{% endif %}tag=new"
+           class="whitespace-nowrap px-4 py-1.5 rounded-full text-sm font-medium transition-all
+                  {% if tag_filter == 'new' %}bg-[#4abe74] text-white{% else %}bg-gray-100 text-gray-500 hover:bg-gray-200{% endif %}">
+          Novos
+        </a>
+        <a href="?{% if search %}q={{ search }}&{% endif %}tag=hard"
+           class="whitespace-nowrap px-4 py-1.5 rounded-full text-sm font-medium transition-all flex items-center gap-1
+                  {% if tag_filter == 'hard' %}bg-orange-400 text-white{% else %}bg-gray-100 text-gray-500 hover:bg-gray-200{% endif %}">
+          Difíceis <span class="w-2 h-2 rounded-full bg-orange-400 {% if tag_filter == 'hard' %}bg-white{% endif %}"></span>
+        </a>
+        {% for tag in all_tags %}
+        <a href="?{% if search %}q={{ search }}&{% endif %}tag={{ tag }}"
+           class="whitespace-nowrap px-4 py-1.5 rounded-full text-sm font-medium transition-all
+                  {% if tag_filter == tag %}bg-[#4abe74] text-white{% else %}bg-gray-100 text-gray-500 hover:bg-gray-200{% endif %}">
+          {{ tag }}
+        </a>
+        {% endfor %}
+      </div>
+    </div>
+  </div>
+
+  <!-- Card list -->
+  <div class="flex-1 overflow-y-auto px-4 pb-36 pt-3 max-w-xl mx-auto w-full">
+    <div class="space-y-3 py-1">
+      {% for item in vocab %}
+      {% with card=item.card mastery=item.mastery badge=item.badge %}
+      <div class="flex items-center gap-4 p-4 rounded-2xl bg-white border border-gray-100 shadow-sm
+                  {% if mastery < 10 %}opacity-70{% endif %}">
+
+        <!-- Circular progress ring -->
+        <div class="relative w-12 h-12 flex-shrink-0">
+          <svg class="w-full h-full -rotate-90" viewBox="0 0 36 36">
+            <circle class="fill-none stroke-gray-100" cx="18" cy="18" r="16" stroke-width="3"/>
+            <circle class="fill-none transition-all duration-700
+                           {% if mastery >= 70 %}stroke-[#4abe74]{% elif mastery >= 30 %}stroke-[#FFD787]{% else %}stroke-red-400{% endif %}"
+                    cx="18" cy="18" r="16" stroke-width="3"
+                    stroke-dasharray="100"
+                    stroke-dashoffset="{{ item.stroke_offset }}"
+                    stroke-linecap="round"/>
+          </svg>
+          <div class="absolute inset-0 flex items-center justify-center">
+            <span class="text-[10px] font-black text-gray-700">{{ mastery }}%</span>
+          </div>
+        </div>
+
+        <!-- Word info -->
+        <div class="flex-1 min-w-0">
+          <div class="flex items-center gap-2">
+            <h3 class="text-lg font-bold text-gray-800 truncate">{{ card.front }}</h3>
+            <button onclick="speakText('{{ card.front|escapejs }}', '{{ card.deck.front_language }}')"
+                    class="text-[#4abe74]/70 hover:text-[#4abe74] transition-colors flex-shrink-0">
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round"
+                      d="M15.536 8.464a5 5 0 010 7.072M12 6v12m0 0l-3-3m3 3l3-3"/>
+              </svg>
+            </button>
+          </div>
+          <p class="text-sm text-gray-400 truncate">{{ card.back }}</p>
+        </div>
+
+        <!-- Badge -->
+        <div class="text-right flex-shrink-0">
+          {% if badge == 'new' %}
+          <span class="px-2 py-0.5 rounded bg-gray-50 text-[10px] font-bold text-gray-400 uppercase">New</span>
+          {% elif badge == 'learning' %}
+          <span class="px-2 py-0.5 rounded bg-[#FFD787]/20 text-[10px] font-bold text-amber-500 uppercase">Learning</span>
+          {% elif mastery < 50 %}
+          <span class="px-2 py-0.5 rounded bg-orange-50 text-[10px] font-bold text-orange-400 uppercase">Hard</span>
+          {% else %}
+          <span class="px-2 py-0.5 rounded bg-[#ABE5BC]/20 text-[10px] font-bold text-[#4abe74] uppercase">Learned</span>
+          {% endif %}
+        </div>
+      </div>
+      {% endwith %}
+      {% empty %}
+      <div class="text-center py-16 text-gray-400">
+        <div class="text-5xl mb-4">📚</div>
+        <p class="font-medium text-gray-600">Nenhum card encontrado.</p>
+        <a href="{% url 'deck_list' %}"
+           class="inline-block mt-3 text-sm text-[#4abe74] font-semibold">
+          Adicionar cards →
+        </a>
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+
+  <!-- Sticky "Review Now" button -->
+  {% if vocab %}
+  <div class="fixed bottom-20 left-0 right-0 px-4 z-30">
+    <div class="max-w-xl mx-auto">
+      <a href="{% url 'study_session' %}"
+         class="flex items-center justify-center gap-3 w-full py-4 bg-gray-900 text-white
+                rounded-2xl font-bold text-base shadow-xl active:scale-[0.98] transition-all">
+        <svg class="w-5 h-5 text-[#4abe74]" fill="currentColor" viewBox="0 0 24 24">
+          <path d="M13 10V3L4 14h7v7l9-11h-7z"/>
+        </svg>
+        Revisar Agora
+        <span class="bg-white/10 px-2 py-0.5 rounded text-[10px] font-black uppercase">
+          {{ total }} cards
+        </span>
+      </a>
+    </div>
+  </div>
+  {% endif %}
+
+</div>
+
+<style>
+  .scrollbar-none::-webkit-scrollbar { display: none; }
+  .scrollbar-none { -ms-overflow-style: none; scrollbar-width: none; }
+</style>
+{% endblock %}

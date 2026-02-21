@@ -1,0 +1,100 @@
+{% extends 'base.html' %}
+{% block title %}Estudando – FlashCards{% endblock %}
+
+{% block content %}
+<div class="min-h-screen bg-gradient-to-br from-cream to-[#ABE5BC]/15 flex flex-col">
+
+  <!-- Header -->
+  <div class="bg-white/85 backdrop-blur-sm border-b border-[#ABE5BC]/20 px-5 py-3 pt-safe flex-shrink-0">
+    <div class="flex items-center justify-between max-w-xl mx-auto">
+      <a href="{% url 'study_home' %}"
+         class="text-gray-400 hover:text-gray-600 p-1 -ml-1 active:scale-95 transition-transform"
+         onclick="return confirm('Sair da sessão? O progresso atual será salvo.')">
+        <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7"/>
+        </svg>
+      </a>
+      <h1 class="text-base font-semibold text-gray-700">Sessão de Estudo</h1>
+      <div class="text-sm text-gray-500 font-medium">{{ done }}/{{ total }}</div>
+    </div>
+  </div>
+
+  <!-- ── Contextual Feedback Overlay ──────────────────────────────────────── -->
+  <div id="rating-overlay"
+       class="fixed inset-0 flex items-center justify-center z-50 pointer-events-none opacity-0 transition-opacity duration-200">
+    <div id="rating-overlay-content"
+         class="px-8 py-4 rounded-3xl shadow-2xl text-white text-lg font-bold scale-90 transition-transform duration-200"
+         style="backdrop-filter: blur(8px);">
+    </div>
+  </div>
+
+  <!-- Card Area (HTMX target) -->
+  <div id="study-area" class="flex-1 px-4 py-5 max-w-xl mx-auto w-full">
+    {% include 'study/partials/card.html' %}
+  </div>
+
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+// ── Contextual Feedback ──────────────────────────────────────────────────────
+var FEEDBACK = {
+  0: { msg: '😰 Não desanime! Você vai lembrar.', bg: 'linear-gradient(135deg, #ef4444, #dc2626)', sound: 'wrong' },
+  1: { msg: '😅 Está ficando mais fácil!',         bg: 'linear-gradient(135deg, #f97316, #ea580c)', sound: 'hard'  },
+  2: { msg: '😊 Ótimo! Revisão em alguns dias.',   bg: 'linear-gradient(135deg, #4abe74, #22c55e)', sound: 'good'  },
+  3: { msg: '🤩 Perfeito! Você domina este card!', bg: 'linear-gradient(135deg, #9b6dc2, #7c3aed)', sound: 'easy'  },
+};
+
+window.showFeedback = function(rating) {
+  var overlay = document.getElementById('rating-overlay');
+  var content = document.getElementById('rating-overlay-content');
+  var f = FEEDBACK[rating];
+  if (!overlay || !content || !f) return;
+
+  content.textContent = f.msg;
+  content.style.background = f.bg;
+  overlay.style.opacity = '1';
+  content.style.transform = 'scale(1)';
+
+  // Auto-hide after 900ms
+  setTimeout(function() {
+    overlay.style.opacity = '0';
+    content.style.transform = 'scale(0.9)';
+  }, 900);
+};
+
+// ── Keyboard shortcuts ───────────────────────────────────────────────────────
+document.addEventListener('keydown', function(e) {
+  var inner = document.getElementById('card-inner');
+  if (!inner) return;
+
+  var flipped = inner.classList.contains('flipped');
+
+  if (e.key === ' ' || e.key === 'Enter') {
+    e.preventDefault();
+    if (window.flipCard) window.flipCard();
+    return;
+  }
+
+  if (flipped) {
+    var map = { '1': 0, '2': 1, '3': 2, '4': 3 };
+    if (map.hasOwnProperty(e.key)) {
+      e.preventDefault();
+      var btn = document.querySelector('[data-rating="' + map[e.key] + '"]');
+      if (btn) {
+        if (window.setTimeSpent) window.setTimeSpent();
+        btn.click();
+      }
+    }
+  }
+});
+
+// ── Reset timer on HTMX swap ─────────────────────────────────────────────────
+document.addEventListener('htmx:afterSwap', function(e) {
+  if (e.detail.target && e.detail.target.id === 'study-area') {
+    window._cardStartTime = Date.now();
+  }
+});
+</script>
+{% endblock %}

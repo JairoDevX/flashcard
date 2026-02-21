@@ -1,0 +1,117 @@
+{% extends 'base.html' %}
+{% block title %}Modo Gesto – {{ card.deck.name }}{% endblock %}
+
+{% block content %}
+<div class="h-screen bg-[#f6f8f6] flex flex-col overflow-hidden">
+
+  <!-- Header -->
+  <header class="flex items-center justify-between px-6 pt-5 pb-3 z-20 bg-[#f6f8f6]">
+    <a href="{% url 'study_home' %}"
+       class="w-9 h-9 flex items-center justify-center rounded-full hover:bg-gray-100
+              text-gray-500 active:scale-95 transition-all"
+       onclick="return confirm('Sair da sessão?')">
+      <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/>
+      </svg>
+    </a>
+
+    <!-- Progress + counter -->
+    <div class="flex flex-col items-center flex-1 px-4">
+      <span class="text-xs font-bold uppercase tracking-wider text-gray-400 mb-1">
+        {{ card.deck.name }}
+      </span>
+      <div class="flex items-center gap-2 w-full max-w-xs">
+        <span class="text-sm font-bold text-gray-700">{{ done }}</span>
+        <div class="flex-1 h-2 bg-gray-200 rounded-full overflow-hidden">
+          <div id="gesture-progress-bar"
+               class="h-full bg-[#4abe74] rounded-full transition-all duration-500
+                      shadow-[0_0_8px_rgba(74,190,116,0.4)]"
+               style="width: {{ progress_pct }}%"></div>
+        </div>
+        <span class="text-sm font-medium text-gray-400">{{ total }}</span>
+      </div>
+    </div>
+
+    <!-- Pause (no-op placeholder) -->
+    <button class="w-9 h-9 flex items-center justify-center rounded-full hover:bg-gray-100
+                   text-gray-400 active:scale-95 transition-all">
+      <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" d="M10 9v6m4-6v6M9 3h6"/>
+      </svg>
+    </button>
+  </header>
+
+  <!-- Card area (HTMX target) -->
+  <div id="gesture-area" class="flex-1 flex flex-col px-5 py-2 relative">
+    {% include 'study/partials/gesture_card.html' %}
+  </div>
+
+  <!-- Bottom action buttons -->
+  <div class="px-6 pb-8 pt-3 grid grid-cols-2 gap-4 bg-[#f6f8f6]">
+
+    <!-- Hard -->
+    <button onclick="gestureRate('hard')"
+            class="flex flex-col items-center justify-center gap-1.5 p-4 rounded-2xl
+                   bg-white border border-gray-100 shadow-sm active:scale-95 transition-all group
+                   hover:border-orange-200">
+      <div class="w-10 h-10 rounded-full bg-orange-50 flex items-center justify-center
+                  text-orange-400 group-hover:bg-orange-100 transition-colors">
+        <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/>
+        </svg>
+      </div>
+      <span class="text-xs font-black text-gray-400 uppercase tracking-wider group-hover:text-orange-400">
+        Difícil
+      </span>
+    </button>
+
+    <!-- Easy -->
+    <button onclick="gestureRate('easy')"
+            class="flex flex-col items-center justify-center gap-1.5 p-4 rounded-2xl
+                   bg-white border border-gray-100 shadow-sm active:scale-95 transition-all group
+                   hover:border-[#ABE5BC]">
+      <div class="w-10 h-10 rounded-full bg-[#ABE5BC]/20 flex items-center justify-center
+                  text-[#4abe74] group-hover:bg-[#ABE5BC]/40 transition-colors">
+        <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/>
+        </svg>
+      </div>
+      <span class="text-xs font-black text-gray-400 uppercase tracking-wider group-hover:text-[#4abe74]">
+        Fácil
+      </span>
+    </button>
+
+  </div>
+
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+window.gestureRate = function(direction) {
+  var card = document.getElementById('gesture-card');
+  if (!card) return;
+  // Animate out
+  var flyX   = direction === 'easy' ? window.innerWidth : -window.innerWidth;
+  var rotate = direction === 'easy' ? 20 : -20;
+  card.style.transform  = 'translateX(' + flyX + 'px) rotate(' + rotate + 'deg)';
+  card.style.transition = 'transform 0.25s ease';
+  card.style.opacity    = '0';
+  if (typeof playSound !== 'undefined') playSound(direction === 'easy' ? 'easy' : 'hard');
+
+  var formId = direction === 'easy' ? 'gesture-easy-form' : 'gesture-hard-form';
+  setTimeout(function() {
+    var form = document.getElementById(formId);
+    if (form) htmx.trigger(form, 'submit');
+  }, 220);
+};
+
+// Update progress bar after HTMX swap
+document.addEventListener('htmx:afterSwap', function(e) {
+  if (e.detail.target && e.detail.target.id === 'gesture-area') {
+    var bar = document.getElementById('gesture-progress-bar');
+    // Progress is updated via new HTML
+  }
+});
+</script>
+{% endblock %}

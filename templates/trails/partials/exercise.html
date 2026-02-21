@@ -1,0 +1,197 @@
+<!-- ── Trail Cloze Exercise Partial (HTMX swapped) ────────────────────────── -->
+<div id="exercise-wrap" class="flex flex-col gap-4 animate-fade">
+
+  <!-- Progress bar -->
+  <div class="h-2 bg-gray-100 rounded-full overflow-hidden">
+    <div class="h-full bg-gradient-to-r from-[#ABE5BC] to-[#4abe74] rounded-full transition-all duration-500"
+         style="width: {{ progress_pct }}%"></div>
+  </div>
+
+  <!-- Sentence card -->
+  <div class="bg-white rounded-3xl shadow-md border border-[#ABE5BC]/20 p-6 flex flex-col items-center gap-4">
+    <p class="text-xs font-bold uppercase tracking-widest text-[#4abe74]">Preencha a lacuna</p>
+    <p class="text-xl font-semibold text-center text-gray-800 leading-relaxed" id="ex-sentence">
+      {{ cloze_before }}<span id="ex-blank"
+            class="inline-block border-b-4 border-[#4abe74] min-w-[80px] mx-1 text-[#4abe74] italic font-bold
+                   text-center transition-all duration-300">____</span>{{ cloze_after }}
+    </p>
+  </div>
+
+  <!-- Options grid 2×2 -->
+  <div class="grid grid-cols-2 gap-3" id="ex-options">
+    {% for opt in cloze_options %}
+    <button data-option="{{ opt }}"
+            onclick="exSelectOption(this)"
+            class="ex-option h-16 rounded-2xl border-2 border-gray-200 bg-white
+                   text-gray-800 font-bold text-base transition-all active:scale-[0.97]
+                   hover:border-[#ABE5BC] hover:bg-[#ABE5BC]/5">
+      {{ opt }}
+    </button>
+    {% empty %}
+    <div class="col-span-2 text-center text-gray-400 py-4 text-sm">
+      Sem opções disponíveis para este card.
+    </div>
+    {% endfor %}
+  </div>
+
+  <!-- Verify button -->
+  <button id="ex-verify-btn"
+          onclick="exVerify()"
+          disabled
+          class="w-full py-4 rounded-2xl font-bold text-base transition-all
+                 bg-gray-200 text-gray-400 cursor-not-allowed"
+          data-correct="{{ cloze_correct }}">
+    VERIFICAR
+  </button>
+
+  <!-- Hidden HTMX form (submitted by CONTINUAR) -->
+  <form id="ex-answer-form"
+        hx-post="{% url 'lesson_answer' trail.id lesson.id %}"
+        hx-target="#trail-exercise-area"
+        hx-swap="innerHTML"
+        class="hidden">
+    {% csrf_token %}
+    <input type="hidden" name="card_id" value="{{ card.id }}">
+    <input type="hidden" name="rating" id="ex-rating-input" value="2">
+  </form>
+
+</div>
+
+<!-- ── Feedback Bottom Sheet ─────────────────────────────────────────────── -->
+<div id="ex-sheet" class="fixed inset-x-0 bottom-0 z-50 translate-y-full transition-transform duration-300 ease-out">
+  <!-- Backdrop -->
+  <div class="absolute inset-x-0 top-0 bottom-0 pointer-events-none"></div>
+
+  <!-- Sheet panel -->
+  <div id="ex-sheet-panel" class="relative rounded-t-3xl px-6 pt-6 pb-10 shadow-2xl bg-white">
+
+    <!-- Correct state -->
+    <div id="ex-sheet-correct" class="hidden flex-col items-start gap-3">
+      <div class="flex items-center gap-3">
+        <div class="w-10 h-10 rounded-full bg-[#4abe74] flex items-center justify-center flex-shrink-0">
+          <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" stroke-width="3" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/>
+          </svg>
+        </div>
+        <div>
+          <p class="text-[#4abe74] font-black text-lg uppercase tracking-tight">Ótimo!</p>
+          <p class="text-gray-500 text-sm">Resposta correta 🎉</p>
+        </div>
+      </div>
+      <button onclick="exContinue(3)"
+              class="w-full py-4 rounded-2xl bg-[#4abe74] text-white font-black text-base
+                     uppercase tracking-wide active:scale-[0.98] transition-transform shadow-lg shadow-[#4abe74]/30">
+        CONTINUAR
+      </button>
+    </div>
+
+    <!-- Wrong state -->
+    <div id="ex-sheet-wrong" class="hidden flex-col items-start gap-3">
+      <div class="flex items-center gap-3">
+        <div class="w-10 h-10 rounded-full bg-red-400 flex items-center justify-center flex-shrink-0">
+          <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" stroke-width="3" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/>
+          </svg>
+        </div>
+        <div>
+          <p class="text-red-500 font-black text-lg uppercase tracking-tight">Ops!</p>
+          <p class="text-gray-500 text-sm">Resposta certa: <span id="ex-correct-reveal" class="font-bold text-gray-700"></span></p>
+        </div>
+      </div>
+      <button onclick="exContinue(1)"
+              class="w-full py-4 rounded-2xl bg-red-400 text-white font-black text-base
+                     uppercase tracking-wide active:scale-[0.98] transition-transform shadow-lg shadow-red-400/30">
+        CONTINUAR
+      </button>
+    </div>
+
+  </div>
+</div>
+
+<script>
+(function() {
+  var _selected = null;
+  var _correct  = document.getElementById('ex-verify-btn') ?
+                  document.getElementById('ex-verify-btn').dataset.correct : '';
+
+  window.exSelectOption = function(btn) {
+    document.querySelectorAll('.ex-option').forEach(function(b) {
+      b.classList.remove('border-[#4abe74]', 'bg-[#ABE5BC]/10', 'text-[#4abe74]');
+      b.classList.add('border-gray-200', 'bg-white', 'text-gray-800');
+    });
+    btn.classList.remove('border-gray-200', 'bg-white', 'text-gray-800');
+    btn.classList.add('border-[#4abe74]', 'bg-[#ABE5BC]/10', 'text-[#4abe74]');
+    _selected = btn.dataset.option;
+
+    var verifyBtn = document.getElementById('ex-verify-btn');
+    if (verifyBtn) {
+      verifyBtn.disabled = false;
+      verifyBtn.className = 'w-full py-4 rounded-2xl font-bold text-base transition-all ' +
+                            'bg-[#4abe74] text-white cursor-pointer active:scale-[0.98] shadow-lg shadow-[#4abe74]/20';
+    }
+  };
+
+  window.exVerify = function() {
+    if (!_selected) return;
+    var isCorrect = _selected.trim().toLowerCase() === _correct.trim().toLowerCase();
+
+    // Fill blank
+    var blank = document.getElementById('ex-blank');
+    if (blank) {
+      blank.textContent = _selected;
+      blank.className = blank.className.replace('text-[#4abe74]', isCorrect ? 'text-[#4abe74]' : 'text-red-500');
+    }
+
+    // Mark options
+    document.querySelectorAll('.ex-option').forEach(function(b) {
+      b.disabled = true;
+      if (b.dataset.option.trim().toLowerCase() === _correct.trim().toLowerCase()) {
+        b.classList.remove('border-gray-200', 'bg-white', 'text-gray-800', 'border-[#4abe74]', 'bg-[#ABE5BC]/10');
+        b.classList.add('border-[#4abe74]', 'bg-[#ABE5BC]/10', 'text-[#4abe74]');
+      }
+    });
+
+    // Hide verify btn
+    var verifyBtn = document.getElementById('ex-verify-btn');
+    if (verifyBtn) verifyBtn.classList.add('hidden');
+
+    // Show sheet
+    var sheet    = document.getElementById('ex-sheet');
+    var correct  = document.getElementById('ex-sheet-correct');
+    var wrong    = document.getElementById('ex-sheet-wrong');
+    var reveal   = document.getElementById('ex-correct-reveal');
+    if (reveal) reveal.textContent = _correct;
+
+    if (isCorrect) {
+      if (correct) correct.className = 'flex flex-col items-start gap-3';
+      if (wrong)   wrong.className   = 'hidden flex-col items-start gap-3';
+      if (typeof playSound !== 'undefined') playSound('good');
+    } else {
+      if (correct) correct.className = 'hidden flex-col items-start gap-3';
+      if (wrong)   wrong.className   = 'flex flex-col items-start gap-3';
+      if (typeof playSound !== 'undefined') playSound('wrong');
+    }
+
+    if (sheet) {
+      sheet.style.transform = 'translateY(0)';
+      var panel = document.getElementById('ex-sheet-panel');
+      if (panel) {
+        panel.style.background = isCorrect ? '#f0fdf4' : '#fff1f2';
+      }
+    }
+  };
+
+  window.exContinue = function(rating) {
+    var input = document.getElementById('ex-rating-input');
+    if (input) input.value = rating;
+
+    // Close sheet
+    var sheet = document.getElementById('ex-sheet');
+    if (sheet) sheet.style.transform = 'translateY(100%)';
+
+    // Submit via HTMX
+    var form = document.getElementById('ex-answer-form');
+    if (form) htmx.trigger(form, 'submit');
+  };
+})();
+</script>

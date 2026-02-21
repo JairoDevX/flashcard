@@ -1,0 +1,99 @@
+{% extends 'base.html' %}
+{% block title %}Trilhas de Aprendizado{% endblock %}
+
+{% block content %}
+<div class="min-h-screen bg-gradient-to-br from-cream to-[#ABE5BC]/10 pb-4">
+
+  <!-- Header -->
+  <div class="bg-white/90 backdrop-blur-sm border-b border-[#ABE5BC]/20 px-4 py-4">
+    <div class="max-w-xl mx-auto">
+      <h1 class="text-xl font-bold text-gray-800">🗺️ Trilhas de Aprendizado</h1>
+      <p class="text-sm text-gray-400 mt-0.5">Complete lições e ganhe XP</p>
+    </div>
+  </div>
+
+  <div class="max-w-xl mx-auto px-4 py-5 space-y-4">
+
+    <!-- ── Existing trails ──────────────────────────────────────────────── -->
+    {% for td in trail_data %}
+    {% with trail=td.trail %}
+    <a href="{% url 'trail_detail' trail.id %}"
+       class="block bg-white rounded-3xl shadow-md border border-[#ABE5BC]/20 p-5 active:scale-[0.98] transition-all">
+      <div class="flex items-center gap-4">
+        <!-- Icon -->
+        <div class="w-14 h-14 bg-gradient-to-br from-[#ABE5BC]/30 to-[#4abe74]/20 rounded-2xl
+                    flex items-center justify-center text-2xl flex-shrink-0">
+          {{ trail.icon }}
+        </div>
+        <!-- Info -->
+        <div class="flex-1 min-w-0">
+          <h2 class="font-bold text-gray-800 truncate">{{ trail.name }}</h2>
+          <p class="text-xs text-gray-400 mt-0.5">{{ td.completed }}/{{ td.total }} lições</p>
+          <!-- Progress bar -->
+          <div class="mt-2 h-2 bg-gray-100 rounded-full overflow-hidden">
+            <div class="h-full bg-gradient-to-r from-[#ABE5BC] to-[#4abe74] rounded-full transition-all"
+                 style="width: {{ td.pct }}%"></div>
+          </div>
+        </div>
+        <!-- Pct -->
+        <div class="text-right flex-shrink-0">
+          <span class="text-lg font-black
+                       {% if td.pct == 100 %}text-[#4abe74]{% else %}text-gray-700{% endif %}">
+            {{ td.pct }}%
+          </span>
+          {% if td.pct == 100 %}
+          <p class="text-xs text-[#4abe74] font-medium">✓ Completa</p>
+          {% endif %}
+        </div>
+      </div>
+    </a>
+    {% endwith %}
+    {% empty %}
+    <div class="text-center py-12 text-gray-400">
+      <div class="text-5xl mb-4">🗺️</div>
+      <p class="font-medium text-gray-600">Nenhuma trilha ainda.</p>
+      <p class="text-sm mt-1">Crie uma abaixo a partir de um deck!</p>
+    </div>
+    {% endfor %}
+
+    <!-- ── Create from deck ─────────────────────────────────────────────── -->
+    {% if available_decks %}
+    <div class="bg-white rounded-3xl shadow-md border border-[#FFD787]/30 p-5">
+      <h2 class="font-bold text-gray-700 mb-1">➕ Nova Trilha</h2>
+      <p class="text-xs text-gray-400 mb-4">Gera uma trilha a partir dos cards de cloze do deck.</p>
+
+      <form method="post" action="{% url 'trail_create' %}">
+        {% csrf_token %}
+        <div class="space-y-3">
+          <select name="deck_id"
+                  class="w-full rounded-2xl border-2 border-gray-200 px-4 py-3 text-sm text-gray-700
+                         focus:border-[#ABE5BC] focus:outline-none transition-colors bg-gray-50">
+            {% for deck in available_decks %}
+            <option value="{{ deck.pk }}">{{ deck.name }}</option>
+            {% endfor %}
+          </select>
+          <button type="submit"
+                  class="w-full py-4 rounded-2xl bg-gradient-to-r from-[#ABE5BC] to-[#4abe74]
+                         text-white font-bold text-base shadow-lg shadow-[#4abe74]/20
+                         active:scale-[0.98] transition-all">
+            Criar Trilha 🚀
+          </button>
+        </div>
+      </form>
+    </div>
+    {% else %}
+    <div class="text-center py-6 bg-white/60 rounded-3xl border border-dashed border-gray-200">
+      <p class="text-sm text-gray-400">
+        Para criar uma trilha, adicione cards do tipo <strong>cloze</strong> a um deck.
+      </p>
+      <a href="{% url 'deck_list' %}"
+         class="inline-block mt-3 px-5 py-2 bg-[#ABE5BC]/20 text-[#4abe74] font-semibold
+                text-sm rounded-xl hover:bg-[#ABE5BC]/30 transition-colors">
+        Ir aos Decks →
+      </a>
+    </div>
+    {% endif %}
+
+  </div>
+</div>
+{% endblock %}

@@ -1,0 +1,125 @@
+{% extends 'base.html' %}
+{% block title %}Sessão Concluída! – FlashCards{% endblock %}
+
+{% block content %}
+<div class="min-h-screen bg-gradient-to-br from-cream via-[#ABE5BC]/20 to-[#FFD787]/20 flex flex-col items-center justify-center px-5 py-10">
+  <div class="w-full max-w-sm">
+
+    <!-- Trophy -->
+    <div class="text-center mb-8">
+      <div class="text-7xl mb-3 animate-bounce">🏆</div>
+      <h1 class="text-2xl font-bold text-gray-800">Sessão Concluída!</h1>
+      <p class="text-gray-500 mt-1 text-sm">Ótimo trabalho! Continue assim.</p>
+    </div>
+
+    <!-- Stats card -->
+    <div class="bg-white rounded-3xl shadow-xl p-6 mb-5">
+      <h2 class="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-4">Resumo</h2>
+
+      <div class="space-y-3">
+        <div class="flex items-center justify-between">
+          <div class="flex items-center gap-2 text-gray-600">
+            <span class="text-xl">📋</span>
+            <span class="text-sm">Cards estudados</span>
+          </div>
+          <span class="font-bold text-gray-800 text-lg">{{ total }}</span>
+        </div>
+
+        <div class="flex items-center justify-between">
+          <div class="flex items-center gap-2 text-gray-600">
+            <span class="text-xl">✅</span>
+            <span class="text-sm">Acertos (Bom + Fácil)</span>
+          </div>
+          <span class="font-bold text-green-600 text-lg">{{ correct }}</span>
+        </div>
+
+        <div class="h-px bg-gray-100 my-1"></div>
+
+        <!-- Accuracy bar -->
+        <div>
+          <div class="flex justify-between text-sm mb-1.5">
+            <span class="text-gray-500">Precisão</span>
+            <span class="font-bold text-gray-800">{{ accuracy }}%</span>
+          </div>
+          <div class="h-3 bg-gray-100 rounded-full overflow-hidden">
+            <div class="h-full rounded-full transition-all duration-1000
+                        {% if accuracy >= 80 %}bg-gradient-to-r from-[#ABE5BC] to-[#4abe74]
+                        {% elif accuracy >= 50 %}bg-gradient-to-r from-[#FFD787] to-[#FFA776]
+                        {% else %}bg-gradient-to-r from-[#FFA89A] to-red-400{% endif %}"
+                 style="width: {{ accuracy }}%"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Performance message -->
+    <div class="text-center mb-5 text-sm text-gray-500 bg-white/60 rounded-2xl px-4 py-3">
+      {% if accuracy >= 90 %}
+        🌟 Excelente! Você está dominando o material!
+      {% elif accuracy >= 70 %}
+        👍 Muito bom! Continue praticando os mais difíceis.
+      {% elif accuracy >= 50 %}
+        💪 Bom esforço! Revise os cards que errou.
+      {% else %}
+        📚 Continue! A prática leva à perfeição.
+      {% endif %}
+    </div>
+
+    <!-- Actions -->
+    <div class="space-y-3">
+
+      <!-- Estudar Novamente (sempre visível) -->
+      <a href="{% url 'study_restart' %}"
+         class="flex items-center justify-center gap-2 w-full py-4
+                bg-gradient-to-r from-[#CFADE8] to-[#9b6dc2]
+                text-white text-center font-bold text-base rounded-2xl shadow-lg
+                hover:opacity-95 active:scale-[0.98] transition-all">
+        <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round"
+                d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
+        </svg>
+        Estudar Novamente
+        {% if last_count > 0 %}
+        <span class="opacity-75 text-sm font-normal">({{ last_count }} cards reembaralhados)</span>
+        {% endif %}
+      </a>
+
+      <a href="{% url 'study_home' %}"
+         class="flex items-center justify-center gap-2 w-full py-4
+                bg-gradient-to-r from-[#ABE5BC] to-[#4abe74]
+                text-white text-center font-bold text-base rounded-2xl shadow-lg
+                hover:opacity-95 active:scale-[0.98] transition-all">
+        <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round"
+                d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z"/>
+          <path stroke-linecap="round" stroke-linejoin="round" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+        </svg>
+        Nova Sessão
+      </a>
+
+      <a href="{% url 'analytics' %}"
+         class="block w-full py-3.5 bg-white border-2 border-[#FFD787] text-amber-600
+                text-center font-semibold text-sm rounded-2xl
+                hover:bg-[#FFD787]/10 active:scale-[0.98] transition-all">
+        Ver Progresso 📊
+      </a>
+
+      <a href="{% url 'dashboard' %}"
+         class="block text-center text-sm text-gray-400 hover:text-gray-600 py-2 transition-colors">
+        Voltar ao Início
+      </a>
+    </div>
+
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+window.addEventListener('load', function() {
+  setTimeout(function() {
+    if (window.playSound) playSound('complete');
+  }, 400);
+});
+</script>
+{% endblock %}

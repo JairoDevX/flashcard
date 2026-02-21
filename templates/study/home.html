@@ -1,0 +1,86 @@
+{% extends 'base.html' %}
+{% block title %}Estudar – FlashCards{% endblock %}
+
+{% block content %}
+<div class="min-h-screen bg-gradient-to-br from-cream to-[#ABE5BC]/20 flex flex-col items-center justify-center px-5">
+  <div class="w-full max-w-sm text-center">
+
+    <!-- Icon -->
+    <div class="w-24 h-24 bg-gradient-to-br from-[#ABE5BC] to-[#4abe74] rounded-3xl mx-auto mb-6 flex items-center justify-center shadow-xl">
+      <svg class="w-12 h-12 text-white" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round"
+              d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z"/>
+        <path stroke-linecap="round" stroke-linejoin="round" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+      </svg>
+    </div>
+
+    {% if queue_count > 0 %}
+      <h1 class="text-2xl font-bold text-gray-800 mb-2">Sessão de Hoje</h1>
+      <p class="text-gray-500 mb-1">Você tem</p>
+      <p class="text-5xl font-bold text-[#4abe74] mb-1">{{ queue_count }}</p>
+      <p class="text-gray-500 mb-8">card{{ queue_count|pluralize:"s" }} para estudar</p>
+
+      <div class="space-y-3">
+        <a href="{% url 'study_session' %}"
+           class="block w-full py-4 bg-gradient-to-r from-[#ABE5BC] to-[#4abe74] text-white text-lg font-bold rounded-2xl shadow-xl hover:opacity-95 active:scale-[0.98] transition-all">
+          Começar! 🚀
+        </a>
+
+        <a href="{% url 'study_restart' %}"
+           class="flex items-center justify-center gap-2 w-full py-3.5
+                  bg-white border-2 border-[#CFADE8] text-purple-700
+                  font-semibold rounded-2xl hover:bg-[#CFADE8]/10 active:scale-[0.98] transition-all text-sm">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round"
+                  d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
+          </svg>
+          Estudar Novamente{% if has_last %} (sessão anterior){% endif %}
+        </a>
+
+        <!-- Gesture mode -->
+        <a href="{% url 'gesture_session' %}"
+           class="flex items-center justify-center gap-2 w-full py-3.5
+                  bg-white border-2 border-[#FFD787] text-amber-600
+                  font-semibold rounded-2xl hover:bg-[#FFD787]/10 active:scale-[0.98] transition-all text-sm">
+          👆 Modo Gesto (swipe)
+        </a>
+
+        <a href="{% url 'dashboard' %}" class="block text-sm text-gray-400 hover:text-gray-600 py-1">Voltar ao início</a>
+      </div>
+
+    {% else %}
+      <h1 class="text-2xl font-bold text-gray-800 mb-3">Tudo em dia! 🎉</h1>
+      <p class="text-gray-500 mb-6">Não há cards para estudar hoje.<br>Volte amanhã ou adicione novos cards.</p>
+
+      <div class="space-y-3">
+        <a href="{% url 'study_restart' %}"
+           class="flex items-center justify-center gap-2 w-full py-4
+                  bg-gradient-to-r from-[#CFADE8] to-[#9b6dc2]
+                  text-white text-lg font-bold rounded-2xl shadow-xl
+                  hover:opacity-95 active:scale-[0.98] transition-all">
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round"
+                  d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
+          </svg>
+          Estudar Novamente
+        </a>
+
+        <a href="{% url 'gesture_session' %}"
+           class="flex items-center justify-center gap-2 w-full py-3.5
+                  bg-white border-2 border-[#FFD787] text-amber-600
+                  font-semibold rounded-2xl hover:bg-[#FFD787]/10 active:scale-[0.98] transition-all text-sm">
+          👆 Modo Gesto (swipe)
+        </a>
+
+        <a href="{% url 'deck_list' %}"
+           class="block w-full py-3.5 bg-white border-2 border-[#ABE5BC] text-[#4abe74] text-base font-semibold rounded-2xl hover:bg-[#ABE5BC]/10 active:scale-[0.98] transition-all">
+          Gerenciar Decks
+        </a>
+
+        <a href="{% url 'dashboard' %}" class="block text-sm text-gray-400 hover:text-gray-600 py-1">Voltar ao início</a>
+      </div>
+    {% endif %}
+
+  </div>
+</div>
+{% endblock %}

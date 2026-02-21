@@ -1,0 +1,52 @@
+{% extends 'base.html' %}
+{% block title %}{{ lesson.title }} – Trilha {{ trail.name }}{% endblock %}
+
+{% block content %}
+<div class="min-h-screen bg-gradient-to-br from-cream to-[#ABE5BC]/10 flex flex-col">
+
+  <!-- Header -->
+  <div class="bg-white/90 backdrop-blur-sm border-b border-[#ABE5BC]/20 px-4 py-3 flex-shrink-0">
+    <div class="flex items-center gap-3 max-w-xl mx-auto">
+      <a href="{% url 'trail_detail' trail.id %}"
+         class="text-gray-400 hover:text-gray-600 p-1 -ml-1 active:scale-95 transition-transform"
+         onclick="return confirm('Sair da lição? Você precisará recomeçar.')">
+        <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/>
+        </svg>
+      </a>
+
+      <!-- Progress bar (fills remaining space) -->
+      <div class="flex-1 h-3 bg-gray-100 rounded-full overflow-hidden">
+        <div id="session-progress-bar"
+             class="h-full bg-gradient-to-r from-[#ABE5BC] to-[#4abe74] rounded-full transition-all duration-500"
+             style="width: {{ progress_pct }}%"></div>
+      </div>
+
+      <!-- XP pill -->
+      <div class="flex items-center gap-1 bg-[#FFD787]/20 rounded-full px-3 py-1">
+        <span class="text-xs">⚡</span>
+        <span class="text-xs font-bold text-amber-600">{{ lesson.xp_reward }} XP</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Exercise area (HTMX target) -->
+  <div id="trail-exercise-area" class="flex-1 px-4 py-5 max-w-xl mx-auto w-full">
+    {% include 'trails/partials/exercise.html' %}
+  </div>
+
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+// Update progress bar after HTMX swap
+document.addEventListener('htmx:afterSwap', function(e) {
+  if (e.detail.target && e.detail.target.id === 'trail-exercise-area') {
+    // Reset any open bottom sheet
+    var sheet = document.getElementById('ex-sheet');
+    if (sheet) sheet.style.transform = 'translateY(100%)';
+  }
+});
+</script>
+{% endblock %}

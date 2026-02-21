@@ -1,0 +1,106 @@
+{% extends 'base.html' %}
+{% block title %}Meus Decks – FlashCards{% endblock %}
+
+{% block content %}
+<div class="min-h-screen bg-gradient-to-br from-cream to-[#CFADE8]/10">
+
+  <!-- Header -->
+  <div class="bg-white/85 backdrop-blur-sm border-b border-gray-100 px-5 py-4 pt-safe">
+    <div class="flex items-center justify-between max-w-xl mx-auto">
+      <h1 class="text-lg font-semibold text-gray-800">Meus Decks</h1>
+      <a href="{% url 'deck_create' %}"
+         class="flex items-center gap-1.5 px-4 py-2 bg-gradient-to-r from-[#ABE5BC] to-[#4abe74] text-white text-sm font-semibold rounded-xl shadow-sm hover:opacity-90 transition-all">
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4"/>
+        </svg>
+        Novo Deck
+      </a>
+    </div>
+  </div>
+
+  <div class="px-4 py-5 max-w-xl mx-auto">
+
+    <!-- Vocabulary shortcut -->
+    <a href="{% url 'vocabulary' %}"
+       class="flex items-center gap-3 bg-gradient-to-r from-[#ABE5BC]/20 to-[#4abe74]/10
+              rounded-2xl p-3.5 mb-4 border border-[#ABE5BC]/30 active:scale-[0.98] transition-all">
+      <span class="text-2xl">📚</span>
+      <div class="flex-1">
+        <p class="font-bold text-gray-800 text-sm">Vocabulário</p>
+        <p class="text-xs text-gray-400">Todos os cards com progresso</p>
+      </div>
+      <svg class="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7"/>
+      </svg>
+    </a>
+
+    {% if decks %}
+    <div class="space-y-3">
+      {% for deck in decks %}
+      <div class="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden hover:shadow-md transition-shadow">
+        <a href="{% url 'deck_detail' deck.pk %}" class="block p-4">
+          <div class="flex items-start gap-3">
+            <div class="w-11 h-11 rounded-xl bg-gradient-to-br from-[#ABE5BC]/40 to-[#CFADE8]/40 flex items-center justify-center flex-shrink-0">
+              <svg class="w-5 h-5 text-[#4abe74]" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round"
+                      d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"/>
+              </svg>
+            </div>
+            <div class="flex-1 min-w-0">
+              <p class="font-semibold text-gray-800 truncate">{{ deck.name }}</p>
+              {% if deck.description %}
+              <p class="text-sm text-gray-400 mt-0.5 truncate">{{ deck.description }}</p>
+              {% endif %}
+              <div class="flex flex-wrap gap-2 mt-2">
+                <span class="text-xs bg-gray-100 text-gray-500 px-2 py-0.5 rounded-full">
+                  {{ deck.card_count }} card{{ deck.card_count|pluralize:"s" }}
+                </span>
+                {% with due=deck.due_count %}
+                {% if due > 0 %}
+                <span class="text-xs bg-[#CFADE8]/30 text-purple-700 px-2 py-0.5 rounded-full">
+                  {{ due }} p/ revisar
+                </span>
+                {% endif %}
+                {% endwith %}
+                {% with new=deck.new_count %}
+                {% if new > 0 %}
+                <span class="text-xs bg-[#ABE5BC]/30 text-green-700 px-2 py-0.5 rounded-full">
+                  {{ new }} novas
+                </span>
+                {% endif %}
+                {% endwith %}
+              </div>
+            </div>
+          </div>
+        </a>
+        <div class="flex border-t border-gray-50">
+          <a href="{% url 'deck_edit' deck.pk %}"
+             class="flex-1 py-2.5 text-xs text-center text-gray-400 hover:text-gray-600 hover:bg-gray-50 transition-colors">
+            Editar
+          </a>
+          <a href="{% url 'card_create' deck.pk %}"
+             class="flex-1 py-2.5 text-xs text-center text-[#4abe74] hover:bg-[#ABE5BC]/10 transition-colors font-medium">
+            + Card
+          </a>
+          <a href="{% url 'deck_delete' deck.pk %}"
+             class="flex-1 py-2.5 text-xs text-center text-red-400 hover:text-red-600 hover:bg-red-50 transition-colors">
+            Excluir
+          </a>
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+    {% else %}
+    <div class="bg-white rounded-3xl shadow-sm border border-dashed border-gray-200 p-10 text-center mt-4">
+      <p class="text-5xl mb-3">📚</p>
+      <p class="text-gray-600 font-semibold text-lg">Nenhum deck criado</p>
+      <p class="text-sm text-gray-400 mt-2 mb-5">Crie um deck para organizar seus flashcards</p>
+      <a href="{% url 'deck_create' %}"
+         class="inline-block px-6 py-3 bg-gradient-to-r from-[#ABE5BC] to-[#4abe74] text-white font-semibold rounded-2xl shadow-md hover:opacity-90 transition-all">
+        Criar meu primeiro deck
+      </a>
+    </div>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}

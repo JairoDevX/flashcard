@@ -1,0 +1,149 @@
+{% extends 'base.html' %}
+{% block title %}Lição Concluída! – {{ trail.name }}{% endblock %}
+
+{% block content %}
+<div class="min-h-screen bg-gradient-to-br from-cream via-[#ABE5BC]/20 to-[#FFD787]/15
+            flex flex-col items-center justify-start px-4 py-8">
+  <div class="w-full max-w-sm">
+
+    <!-- Trophy + XP -->
+    <div class="text-center mb-6">
+      <div class="text-7xl mb-2 animate-bounce">🏆</div>
+      <h1 class="text-2xl font-bold text-gray-800">Lição Concluída!</h1>
+      <p class="text-gray-500 mt-1 text-sm">{{ lesson.title }} – {{ trail.name }}</p>
+
+      <!-- XP pill -->
+      <div class="inline-flex items-center gap-2 mt-3 bg-[#FFD787]/30 rounded-full px-5 py-2">
+        <span class="text-lg">⚡</span>
+        <span class="font-black text-amber-600 text-lg">+{{ xp }} XP</span>
+      </div>
+    </div>
+
+    <!-- Stats card -->
+    <div class="bg-white rounded-3xl shadow-xl p-5 mb-4">
+      <h2 class="text-xs font-bold text-gray-400 uppercase tracking-widest mb-4">Resultado</h2>
+
+      <div class="flex gap-3 mb-4">
+        <!-- Correct -->
+        <div class="flex-1 bg-[#ABE5BC]/20 rounded-2xl p-3 text-center">
+          <p class="text-2xl font-black text-[#4abe74]">{{ correct }}</p>
+          <p class="text-xs text-gray-500 mt-0.5">Corretas</p>
+        </div>
+        <!-- Wrong -->
+        <div class="flex-1 bg-red-50 rounded-2xl p-3 text-center">
+          <p class="text-2xl font-black text-red-400">{{ wrong }}</p>
+          <p class="text-xs text-gray-500 mt-0.5">Erradas</p>
+        </div>
+        <!-- Total -->
+        <div class="flex-1 bg-gray-50 rounded-2xl p-3 text-center">
+          <p class="text-2xl font-black text-gray-700">{{ total }}</p>
+          <p class="text-xs text-gray-500 mt-0.5">Total</p>
+        </div>
+      </div>
+
+      <!-- Accuracy bar -->
+      <div>
+        <div class="flex justify-between text-sm mb-1.5">
+          <span class="text-gray-500 text-xs">Precisão</span>
+          <span class="font-black text-gray-800">{{ accuracy }}%</span>
+        </div>
+        <div class="h-3 bg-gray-100 rounded-full overflow-hidden">
+          <div class="h-full rounded-full transition-all duration-1000
+                      {% if accuracy >= 80 %}bg-gradient-to-r from-[#ABE5BC] to-[#4abe74]
+                      {% elif accuracy >= 50 %}bg-gradient-to-r from-[#FFD787] to-[#FFA776]
+                      {% else %}bg-gradient-to-r from-[#FFA89A] to-red-400{% endif %}"
+               style="width: {{ accuracy }}%"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Per-card review list -->
+    {% if results %}
+    <div class="bg-white rounded-3xl shadow-lg p-5 mb-4">
+      <h2 class="text-xs font-bold text-gray-400 uppercase tracking-widest mb-3">Revisão das Frases</h2>
+      <div class="space-y-2 max-h-60 overflow-y-auto">
+        {% for r in results %}
+        <div class="flex items-start gap-3 p-3 rounded-2xl
+                    {% if r.correct %}bg-[#ABE5BC]/10{% else %}bg-red-50{% endif %}">
+          <div class="flex-shrink-0 w-6 h-6 rounded-full flex items-center justify-center mt-0.5
+                      {% if r.correct %}bg-[#4abe74]{% else %}bg-red-400{% endif %}">
+            {% if r.correct %}
+            <svg class="w-3.5 h-3.5 text-white" fill="none" stroke="currentColor" stroke-width="3" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/>
+            </svg>
+            {% else %}
+            <svg class="w-3.5 h-3.5 text-white" fill="none" stroke="currentColor" stroke-width="3" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/>
+            </svg>
+            {% endif %}
+          </div>
+          <div class="flex-1 min-w-0">
+            <p class="text-sm text-gray-700 font-medium leading-snug">{{ r.front }}</p>
+            {% if r.back %}
+            <p class="text-xs text-gray-400 mt-0.5 truncate">{{ r.back }}</p>
+            {% endif %}
+          </div>
+        </div>
+        {% endfor %}
+      </div>
+    </div>
+    {% endif %}
+
+    <!-- Performance message -->
+    <div class="text-center mb-5 text-sm text-gray-500 bg-white/60 rounded-2xl px-4 py-3">
+      {% if accuracy >= 90 %}
+        🌟 Excelente! Você está dominando o material!
+      {% elif accuracy >= 70 %}
+        👍 Muito bom! Continue praticando.
+      {% elif accuracy >= 50 %}
+        💪 Bom esforço! Você vai melhorar.
+      {% else %}
+        📚 Continue! A prática leva à perfeição.
+      {% endif %}
+    </div>
+
+    <!-- Actions -->
+    <div class="space-y-3">
+
+      {% if next_lesson %}
+      <a href="{% url 'lesson_session' trail.id next_lesson.id %}"
+         class="flex items-center justify-center gap-2 w-full py-4
+                bg-gradient-to-r from-[#ABE5BC] to-[#4abe74]
+                text-white font-bold text-base rounded-2xl shadow-lg shadow-[#4abe74]/20
+                hover:opacity-95 active:scale-[0.98] transition-all">
+        Próxima Lição →
+        <span class="text-sm font-normal opacity-75">{{ next_lesson.title }}</span>
+      </a>
+      {% else %}
+      <div class="text-center py-3 bg-[#FFD787]/20 rounded-2xl">
+        <p class="text-amber-700 font-bold">🎉 Trilha completa!</p>
+      </div>
+      {% endif %}
+
+      <a href="{% url 'trail_detail' trail.id %}"
+         class="flex items-center justify-center gap-2 w-full py-4
+                bg-white border-2 border-[#ABE5BC]
+                text-[#4abe74] font-semibold text-base rounded-2xl
+                hover:bg-[#ABE5BC]/10 active:scale-[0.98] transition-all">
+        Ver Trilha
+      </a>
+
+      <a href="{% url 'trail_list' %}"
+         class="block text-center text-sm text-gray-400 hover:text-gray-600 py-2 transition-colors">
+        ← Todas as trilhas
+      </a>
+    </div>
+
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+window.addEventListener('load', function() {
+  setTimeout(function() {
+    if (window.playSound) playSound('complete');
+  }, 400);
+});
+</script>
+{% endblock %}

@@ -1,0 +1,93 @@
+{% extends 'base.html' %}
+{% block title %}Perfil – FlashCards{% endblock %}
+
+{% block content %}
+<div class="min-h-screen bg-gradient-to-br from-cream to-[#FFA89A]/10">
+
+  <!-- Header -->
+  <div class="bg-white/85 backdrop-blur-sm border-b border-gray-100 px-5 py-4 pt-safe">
+    <div class="max-w-xl mx-auto">
+      <h1 class="text-lg font-semibold text-gray-800">Meu Perfil</h1>
+    </div>
+  </div>
+
+  <div class="px-4 py-5 max-w-xl mx-auto space-y-5">
+
+    <!-- Avatar card -->
+    <div class="bg-white rounded-3xl shadow-sm p-6 flex items-center gap-4 border border-gray-100">
+      <div class="w-16 h-16 rounded-full bg-gradient-to-br from-[#CFADE8] to-[#ABE5BC] flex items-center justify-center shadow-md flex-shrink-0">
+        <span class="text-white font-bold text-2xl">{{ user.username|first|upper }}</span>
+      </div>
+      <div>
+        <p class="font-semibold text-gray-800 text-lg">{{ user.get_full_name|default:user.username }}</p>
+        <p class="text-sm text-gray-500">{{ user.email }}</p>
+        <p class="text-xs text-gray-400 mt-0.5">Membro desde {{ user.date_joined|date:"M/Y" }}</p>
+      </div>
+    </div>
+
+    <!-- Study Settings -->
+    <div class="bg-white rounded-3xl shadow-sm border border-gray-100 overflow-hidden">
+      <div class="px-5 py-4 border-b border-gray-50">
+        <h2 class="font-semibold text-gray-700 flex items-center gap-2">
+          <svg class="w-5 h-5 text-[#ABE5BC]" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round"
+                  d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/>
+            <path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
+          </svg>
+          Configurações de Estudo
+        </h2>
+      </div>
+
+      <form method="post" class="p-5 space-y-4">
+        {% csrf_token %}
+
+        <div>
+          <label class="block text-sm font-medium text-gray-700 mb-1.5">{{ form.new_cards_per_day.label }}</label>
+          <input type="number" name="new_cards_per_day" min="1" max="200"
+                 value="{{ form.new_cards_per_day.value|default:20 }}"
+                 class="field-input w-full">
+        </div>
+
+        <div>
+          <label class="block text-sm font-medium text-gray-700 mb-1.5">{{ form.max_reviews_per_day.label }}</label>
+          <input type="number" name="max_reviews_per_day" min="1" max="9999"
+                 value="{{ form.max_reviews_per_day.value|default:'' }}"
+                 placeholder="Sem limite"
+                 class="field-input w-full">
+          <p class="text-xs text-gray-400 mt-1">Deixe em branco para sem limite</p>
+        </div>
+
+        <div>
+          <label class="block text-sm font-medium text-gray-700 mb-1.5">{{ form.session_order.label }}</label>
+          <select name="session_order" class="field-input w-full">
+            <option value="reviews_first" {% if form.session_order.value == 'reviews_first' %}selected{% endif %}>Revisões primeiro</option>
+            <option value="new_first" {% if form.session_order.value == 'new_first' %}selected{% endif %}>Novas primeiro</option>
+          </select>
+        </div>
+
+        <div>
+          <label class="block text-sm font-medium text-gray-700 mb-1.5">{{ form.timezone.label }}</label>
+          <input type="text" name="timezone"
+                 value="{{ form.timezone.value|default:'America/Sao_Paulo' }}"
+                 class="field-input w-full" placeholder="America/Sao_Paulo">
+        </div>
+
+        <button type="submit"
+                class="w-full py-3.5 bg-gradient-to-r from-[#ABE5BC] to-[#4abe74] text-white font-semibold rounded-2xl shadow-md hover:opacity-95 active:scale-[0.98] transition-all mt-2">
+          Salvar Configurações
+        </button>
+      </form>
+    </div>
+
+    <!-- Logout -->
+    <form method="post" action="{% url 'logout' %}">
+      {% csrf_token %}
+      <button type="submit"
+              class="w-full py-3 border-2 border-red-200 text-red-500 font-semibold rounded-2xl hover:bg-red-50 active:scale-[0.98] transition-all">
+        Sair da conta
+      </button>
+    </form>
+
+  </div>
+</div>
+{% endblock %}

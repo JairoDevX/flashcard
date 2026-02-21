@@ -1,0 +1,501 @@
+<!-- ── Card Partial (HTMX swapped) ───────────────────────────────────────── -->
+
+{% if card.card_type == 'cloze' %}
+<!-- ══════════════════════════════════════════════════════════════════════════
+     CLOZE CARD — v2 Multiple-Choice Design
+     ══════════════════════════════════════════════════════════════════════════ -->
+<div class="flex flex-col gap-4 animate-fade">
+
+  <!-- Counter + Progress -->
+  <div class="flex items-center justify-between text-sm text-gray-500 px-1">
+    <span>{{ done }} / {{ total }}</span>
+    <span class="text-xs font-semibold uppercase tracking-widest text-[#4abe74]">Preencha a lacuna</span>
+  </div>
+  <div class="h-2 bg-gray-100 rounded-full overflow-hidden">
+    <div class="h-full bg-gradient-to-r from-[#ABE5BC] to-[#4abe74] rounded-full transition-all duration-500"
+         style="width: {{ progress_pct }}%"></div>
+  </div>
+
+  <!-- ── Exercise Card ─────────────────────────────────────────────────── -->
+  <div class="bg-white rounded-3xl shadow-lg border border-[#ABE5BC]/20 p-7 flex flex-col items-center gap-5">
+
+    <!-- Icon -->
+    <div class="w-14 h-14 bg-[#ABE5BC]/20 rounded-2xl flex items-center justify-center">
+      <svg class="w-7 h-7 text-[#4abe74]" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round"
+              d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"/>
+      </svg>
+    </div>
+
+    <!-- Sentence with blank -->
+    <p class="text-xl font-semibold text-center text-gray-800 leading-relaxed" id="cloze-sentence">
+      {{ cloze_before }}<span id="cloze-blank"
+            class="inline-block border-b-4 border-[#4abe74] min-w-[80px] mx-1 text-[#4abe74] italic font-bold
+                   text-center transition-all duration-300">____</span>{{ cloze_after }}
+    </p>
+
+    <!-- Speak sentence button -->
+    <button onclick="speakText('{{ card.front|escapejs }}', '{{ card.deck.front_language }}')"
+            class="speak-btn flex items-center gap-2 px-4 py-2 rounded-full border border-[#ABE5BC]/50
+                   text-[#4abe74] hover:bg-[#ABE5BC]/10 active:scale-95 transition-all text-sm font-medium">
+      <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round"
+              d="M15.536 8.464a5 5 0 010 7.072M12 6v12m0 0l-3-3m3 3l3-3M9.172 9.172a4 4 0 000 5.656"/>
+      </svg>
+      {{ card.deck.front_language }}
+    </button>
+
+    <!-- Translation / back toggle -->
+    <div class="w-full">
+      <button id="cloze-toggle-btn"
+              onclick="toggleClozeTranslation()"
+              class="flex items-center justify-center gap-2 w-full px-4 py-2 rounded-xl border border-gray-200
+                     text-gray-500 hover:border-[#ABE5BC] hover:text-[#4abe74] transition-colors text-sm font-medium">
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round"
+                d="M3 5h12M9 3v2m1.048 9.5A18.022 18.022 0 016.412 9m6.088 9h7M11 21l5-10 5 10M12.751 5C11.783 10.77 8.07 15.61 3 18.129"/>
+        </svg>
+        Ver tradução / verso
+      </button>
+      <p id="cloze-translation"
+         class="hidden mt-2 text-center text-gray-400 text-sm italic px-2">{{ card.back }}</p>
+    </div>
+
+    {% if card.get_tags_list %}
+    <div class="flex flex-wrap gap-1 justify-center">
+      {% for tag in card.get_tags_list %}
+      <span class="text-xs bg-[#ABE5BC]/20 text-green-700 px-2 py-0.5 rounded-full">{{ tag }}</span>
+      {% endfor %}
+    </div>
+    {% endif %}
+  </div>
+
+  <!-- ── Options Grid (2 × 2) ──────────────────────────────────────────── -->
+  <div class="grid grid-cols-2 gap-3" id="cloze-options">
+    {% for opt in cloze_options %}
+    <button data-option="{{ opt }}"
+            onclick="selectClozeOption(this)"
+            class="cloze-option h-16 rounded-2xl border-2 border-gray-200 bg-white
+                   text-gray-800 font-bold text-lg transition-all active:scale-[0.97]
+                   hover:border-[#ABE5BC] hover:bg-[#ABE5BC]/5">
+      {{ opt }}
+    </button>
+    {% endfor %}
+  </div>
+
+  <!-- ── Feedback banner (hidden until checked) ────────────────────────── -->
+  <div id="cloze-feedback" class="hidden rounded-2xl px-5 py-4 flex items-center gap-3 text-base font-semibold"></div>
+
+  <!-- Hidden HTMX form -->
+  <form id="answer-form" method="post" action="{% url 'study_answer' %}">
+    {% csrf_token %}
+    <input type="hidden" name="card_id" value="{{ card.id }}">
+    <input type="hidden" name="time_spent_ms" id="time-spent" value="0">
+  </form>
+
+  <!-- ── Verify / Continue button ──────────────────────────────────────── -->
+  <button id="cloze-action-btn"
+          disabled
+          onclick="onClozeAction()"
+          data-correct="{{ cloze_correct }}"
+          data-phase="verify"
+          class="w-full py-4 rounded-2xl font-bold text-base transition-all
+                 bg-gray-100 text-gray-400 cursor-not-allowed">
+    Verificar Resposta
+  </button>
+
+  <!-- Hidden "continue" trigger (HTMX attributes live here) -->
+  <button id="cloze-continue-trigger"
+          class="hidden"
+          hx-post="{% url 'study_answer' %}"
+          hx-target="#study-area"
+          hx-swap="innerHTML"
+          hx-include="#answer-form">
+  </button>
+
+</div>
+
+<script>
+(function () {
+  window._cardStartTime = Date.now();
+
+  window.setTimeSpent = function () {
+    var el = document.getElementById('time-spent');
+    if (el) el.value = Date.now() - (window._cardStartTime || Date.now());
+  };
+
+  // ── Text-to-Speech (shared) ───────────────────────────────────────────
+  window.speakText = function (text, lang) {
+    if (!window.speechSynthesis) return;
+    window.speechSynthesis.cancel();
+    var utt = new SpeechSynthesisUtterance(text);
+    utt.lang  = lang || 'en-US';
+    utt.rate  = 0.85;
+    utt.pitch = 1.0;
+    window.speechSynthesis.speak(utt);
+  };
+
+  // ── Translation toggle ────────────────────────────────────────────────
+  window.toggleClozeTranslation = function () {
+    var t = document.getElementById('cloze-translation');
+    var b = document.getElementById('cloze-toggle-btn');
+    if (!t) return;
+    t.classList.toggle('hidden');
+    b.classList.toggle('border-[#ABE5BC]');
+    b.classList.toggle('text-[#4abe74]');
+  };
+
+  // ── Option selection ──────────────────────────────────────────────────
+  var selectedOption = null;
+
+  window.selectClozeOption = function (btn) {
+    if (btn.disabled) return;
+    // reset all
+    document.querySelectorAll('.cloze-option').forEach(function (b) {
+      b.classList.remove('border-[#4abe74]', 'bg-[#ABE5BC]/10', 'shadow-md');
+      b.classList.add('border-gray-200');
+    });
+    // select clicked
+    btn.classList.remove('border-gray-200');
+    btn.classList.add('border-[#4abe74]', 'bg-[#ABE5BC]/10', 'shadow-md');
+    selectedOption = btn.dataset.option;
+
+    // enable action button
+    var actionBtn = document.getElementById('cloze-action-btn');
+    actionBtn.disabled = false;
+    actionBtn.classList.remove('bg-gray-100', 'text-gray-400', 'cursor-not-allowed');
+    actionBtn.classList.add('bg-gradient-to-r', 'from-[#ABE5BC]', 'to-[#4abe74]',
+                            'text-white', 'shadow-lg', 'shadow-[#4abe74]/20',
+                            'active:scale-[0.98]', 'cursor-pointer');
+  };
+
+  // ── Check / Continue logic ────────────────────────────────────────────
+  window.onClozeAction = function () {
+    var actionBtn = document.getElementById('cloze-action-btn');
+    if (actionBtn.dataset.phase === 'verify') {
+      verifyAnswer();
+    } else {
+      continueToNext();
+    }
+  };
+
+  function verifyAnswer() {
+    var actionBtn = document.getElementById('cloze-action-btn');
+    var correct   = actionBtn.dataset.correct;
+    var isCorrect = selectedOption === correct;
+
+    setTimeSpent();
+
+    // ── Mark options ──────────────────────────────────────────────────
+    document.querySelectorAll('.cloze-option').forEach(function (b) {
+      b.disabled = true;
+      b.classList.remove('border-[#4abe74]', 'bg-[#ABE5BC]/10', 'shadow-md', 'border-gray-200');
+
+      if (b.dataset.option === correct) {
+        // always highlight correct
+        b.classList.add('border-[#4abe74]', 'bg-[#ABE5BC]/30', 'text-[#4abe74]');
+      } else if (b.dataset.option === selectedOption && !isCorrect) {
+        b.classList.add('border-red-400', 'bg-red-50', 'text-red-600');
+      } else {
+        b.classList.add('border-gray-200');
+      }
+    });
+
+    // ── Reveal answer in blank ────────────────────────────────────────
+    var blank = document.getElementById('cloze-blank');
+    if (blank) {
+      blank.textContent = correct;
+      blank.classList.remove('text-[#4abe74]', 'border-[#4abe74]');
+      blank.classList.add(isCorrect ? 'text-[#4abe74]' : 'text-red-500',
+                          isCorrect ? 'border-[#4abe74]' : 'border-red-400');
+    }
+
+    // ── Feedback banner ───────────────────────────────────────────────
+    var fb = document.getElementById('cloze-feedback');
+    if (isCorrect) {
+      fb.className = 'rounded-2xl px-5 py-4 flex items-center gap-3 text-base font-semibold ' +
+                     'bg-[#ABE5BC]/20 border border-[#4abe74]/30 text-green-700';
+      fb.innerHTML = '<span class="text-2xl">✅</span>' +
+                     '<span>Correto! Muito bem!</span>';
+      if (window.playSound)    playSound('good');
+      if (window.showFeedback) showFeedback(2);
+    } else {
+      fb.className = 'rounded-2xl px-5 py-4 flex items-center gap-3 text-base font-semibold ' +
+                     'bg-red-50 border border-red-200 text-red-700';
+      fb.innerHTML = '<span class="text-2xl">❌</span>' +
+                     '<span>Resposta certa: <b>' + correct + '</b></span>';
+      if (window.playSound)    playSound('wrong');
+      if (window.showFeedback) showFeedback(0);
+    }
+    fb.classList.remove('hidden');
+
+    // ── Store rating on the continue trigger ──────────────────────────
+    var trigger = document.getElementById('cloze-continue-trigger');
+    trigger.setAttribute('hx-vals', JSON.stringify({ rating: isCorrect ? '2' : '0' }));
+    htmx.process(trigger);  // re-bind so hx-vals is live
+
+    // ── Switch button to "Continuar" ──────────────────────────────────
+    actionBtn.textContent = 'Continuar →';
+    actionBtn.dataset.phase = 'continue';
+    actionBtn.classList.remove('from-[#ABE5BC]', 'to-[#4abe74]', 'shadow-[#4abe74]/20');
+    actionBtn.classList.add(isCorrect ? 'from-[#4abe74]' : 'from-red-400',
+                            isCorrect ? 'to-[#ABE5BC]'   : 'to-red-500');
+  }
+
+  function continueToNext() {
+    setTimeSpent();
+    document.getElementById('cloze-continue-trigger').click();
+  }
+
+  // ── Keyboard shortcut: Space / Enter = confirm / continue ─────────────
+  document.addEventListener('keydown', function (e) {
+    if (e.key === ' ' || e.key === 'Enter') {
+      e.preventDefault();
+      var actionBtn = document.getElementById('cloze-action-btn');
+      if (actionBtn && !actionBtn.disabled) onClozeAction();
+    }
+  }, { once: false });
+})();
+</script>
+
+{% else %}
+<!-- ══════════════════════════════════════════════════════════════════════════
+     NORMAL CARD — Flip-card Design
+     ══════════════════════════════════════════════════════════════════════════ -->
+<div class="flex flex-col gap-4 animate-fade">
+
+  <!-- Counter + Progress -->
+  <div class="flex items-center justify-between text-sm text-gray-500 px-1">
+    <span>{{ done }} / {{ total }}</span>
+    <span>{{ remaining }} restante{{ remaining|pluralize:"s" }}</span>
+  </div>
+  <div class="h-2 bg-gray-100 rounded-full overflow-hidden">
+    <div class="h-full bg-gradient-to-r from-[#ABE5BC] to-[#4abe74] rounded-full transition-all duration-500"
+         style="width: {{ progress_pct }}%"></div>
+  </div>
+
+  <!-- Feedback toast (hidden until rated) -->
+  <div id="rating-feedback" class="hidden text-center text-sm font-medium py-2.5 px-4 rounded-2xl transition-all duration-300"></div>
+
+  <!-- Flashcard flip area -->
+  <div class="perspective h-56 sm:h-64" id="card-wrapper">
+    <div class="card-inner h-full" id="card-inner">
+
+      <!-- ── Front face ─────────────────────────────────────── -->
+      <div class="card-face bg-white rounded-2xl shadow-lg border border-[#ABE5BC]/20 flex flex-col">
+        <div class="flex items-center justify-between px-4 pt-4 pb-1">
+          <span class="text-xs font-semibold uppercase tracking-widest text-[#ABE5BC]">Frente</span>
+          <button onclick="event.stopPropagation(); speakText('{{ card.front|escapejs }}', '{{ card.deck.front_language }}')"
+                  title="Ouvir pronúncia ({{ card.deck.front_language }})"
+                  class="speak-btn flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium
+                         bg-[#ABE5BC]/20 text-green-700 hover:bg-[#ABE5BC]/40 active:scale-95 transition-all">
+            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round"
+                    d="M15.536 8.464a5 5 0 010 7.072M12 6v12m0 0l-3-3m3 3l3-3M9.172 9.172a4 4 0 000 5.656"/>
+            </svg>
+            {{ card.deck.front_language }}
+          </button>
+        </div>
+        <div class="flex-1 flex items-center justify-center px-6 pb-5">
+          <p class="text-xl font-semibold text-center text-gray-800 leading-relaxed">{{ card.front }}</p>
+        </div>
+      </div>
+
+      <!-- ── Back face ──────────────────────────────────────── -->
+      <div class="card-face card-back-face bg-gradient-to-br from-white to-[#ABE5BC]/10 rounded-2xl shadow-lg border border-[#ABE5BC]/30 flex flex-col">
+        <div class="flex items-center justify-between px-4 pt-4 pb-1">
+          <span class="text-xs font-semibold uppercase tracking-widest text-[#CFADE8]">Resposta</span>
+          <button onclick="event.stopPropagation(); speakText('{{ card.back|escapejs }}', '{{ card.deck.back_language }}')"
+                  title="Ouvir pronúncia ({{ card.deck.back_language }})"
+                  class="speak-btn flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium
+                         bg-[#CFADE8]/30 text-purple-700 hover:bg-[#CFADE8]/50 active:scale-95 transition-all">
+            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round"
+                    d="M15.536 8.464a5 5 0 010 7.072M12 6v12m0 0l-3-3m3 3l3-3M9.172 9.172a4 4 0 000 5.656"/>
+            </svg>
+            {{ card.deck.back_language }}
+          </button>
+        </div>
+        <div class="flex-1 flex flex-col items-center justify-center px-6 pb-4 gap-2">
+          <p class="text-xl font-semibold text-center text-gray-800 leading-relaxed">{{ card.back }}</p>
+          {% if card.get_tags_list %}
+          <div class="flex flex-wrap gap-1 justify-center mt-1">
+            {% for tag in card.get_tags_list %}
+            <span class="text-xs bg-[#ABE5BC]/30 text-green-700 px-2 py-0.5 rounded-full">{{ tag }}</span>
+            {% endfor %}
+          </div>
+          {% endif %}
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- Tap hint -->
+  <p class="text-center text-xs text-gray-400" id="tap-hint">
+    Toque no card ou pressione <kbd class="bg-gray-100 px-1 rounded">Espaço</kbd> para virar
+  </p>
+  <p class="text-center text-xs text-gray-400 hidden" id="tap-hint-back">
+    Toque no card para rever a frente
+  </p>
+
+  <!-- Hidden form for HTMX submission -->
+  <form id="answer-form" method="post" action="{% url 'study_answer' %}">
+    {% csrf_token %}
+    <input type="hidden" name="card_id" value="{{ card.id }}">
+    <input type="hidden" name="time_spent_ms" id="time-spent" value="0">
+  </form>
+
+  <!-- Reveal button -->
+  <button id="reveal-btn"
+          onclick="flipCard()"
+          class="w-full py-4 bg-gradient-to-r from-[#ABE5BC] to-[#4abe74] text-white text-base font-bold rounded-2xl shadow-lg hover:opacity-95 active:scale-[0.98] transition-all">
+    Ver Resposta
+  </button>
+
+  <!-- Rating buttons (hidden until flipped) -->
+  <div id="rating-buttons" class="hidden">
+    <p class="text-center text-sm text-gray-500 mb-3 font-medium">Como foi?</p>
+    <div class="grid grid-cols-2 gap-2.5">
+
+      <button data-rating="0"
+              hx-post="{% url 'study_answer' %}"
+              hx-target="#study-area"
+              hx-swap="innerHTML"
+              hx-include="#answer-form"
+              hx-vals='{"rating": "0"}'
+              onclick="setTimeSpent(); playSound('wrong'); if(window.showFeedback) showFeedback(0)"
+              class="rating-btn py-3.5 bg-red-50 border border-red-100 text-red-600 font-semibold rounded-2xl hover:bg-red-100 transition-all flex flex-col items-center gap-0.5">
+        <span class="text-lg">😰</span>
+        <span class="text-sm">Errei</span>
+        <span class="text-xs font-normal text-red-400">Amanhã • [1]</span>
+      </button>
+
+      <button data-rating="1"
+              hx-post="{% url 'study_answer' %}"
+              hx-target="#study-area"
+              hx-swap="innerHTML"
+              hx-include="#answer-form"
+              hx-vals='{"rating": "1"}'
+              onclick="setTimeSpent(); playSound('hard'); if(window.showFeedback) showFeedback(1)"
+              class="rating-btn py-3.5 bg-orange-50 border border-orange-100 text-orange-600 font-semibold rounded-2xl hover:bg-orange-100 transition-all flex flex-col items-center gap-0.5">
+        <span class="text-lg">😅</span>
+        <span class="text-sm">Difícil</span>
+        <span class="text-xs font-normal text-orange-400">Em breve • [2]</span>
+      </button>
+
+      <button data-rating="2"
+              hx-post="{% url 'study_answer' %}"
+              hx-target="#study-area"
+              hx-swap="innerHTML"
+              hx-include="#answer-form"
+              hx-vals='{"rating": "2"}'
+              onclick="setTimeSpent(); playSound('good'); if(window.showFeedback) showFeedback(2)"
+              class="rating-btn py-3.5 bg-[#ABE5BC]/20 border border-[#ABE5BC]/40 text-green-700 font-semibold rounded-2xl hover:bg-[#ABE5BC]/40 transition-all flex flex-col items-center gap-0.5">
+        <span class="text-lg">😊</span>
+        <span class="text-sm">Bom</span>
+        <span class="text-xs font-normal text-green-500">Alguns dias • [3]</span>
+      </button>
+
+      <button data-rating="3"
+              hx-post="{% url 'study_answer' %}"
+              hx-target="#study-area"
+              hx-swap="innerHTML"
+              hx-include="#answer-form"
+              hx-vals='{"rating": "3"}'
+              onclick="setTimeSpent(); playSound('easy'); if(window.showFeedback) showFeedback(3)"
+              class="rating-btn py-3.5 bg-[#CFADE8]/20 border border-[#CFADE8]/40 text-purple-700 font-semibold rounded-2xl hover:bg-[#CFADE8]/40 transition-all flex flex-col items-center gap-0.5">
+        <span class="text-lg">🤩</span>
+        <span class="text-sm">Fácil</span>
+        <span class="text-xs font-normal text-purple-400">+1 semana • [4]</span>
+      </button>
+
+    </div>
+  </div>
+
+</div>
+
+<script>
+(function () {
+  window._cardStartTime = Date.now();
+
+  window.setTimeSpent = function () {
+    var el = document.getElementById('time-spent');
+    if (el) el.value = Date.now() - (window._cardStartTime || Date.now());
+  };
+
+  // ── Card flip / unflip ────────────────────────────────────────────────
+  window.flipCard = function () {
+    var inner     = document.getElementById('card-inner');
+    var revBtn    = document.getElementById('reveal-btn');
+    var ratings   = document.getElementById('rating-buttons');
+    var hintFront = document.getElementById('tap-hint');
+    var hintBack  = document.getElementById('tap-hint-back');
+    if (!inner) return;
+
+    if (!inner.classList.contains('flipped')) {
+      inner.classList.add('flipped');
+      if (revBtn)    revBtn.classList.add('hidden');
+      if (ratings)   ratings.classList.remove('hidden');
+      if (hintFront) hintFront.classList.add('hidden');
+      if (hintBack)  hintBack.classList.remove('hidden');
+      playSound('flip');
+    } else {
+      inner.classList.remove('flipped');
+      if (revBtn)    revBtn.classList.remove('hidden');
+      if (ratings)   ratings.classList.add('hidden');
+      if (hintFront) hintFront.classList.remove('hidden');
+      if (hintBack)  hintBack.classList.add('hidden');
+    }
+  };
+
+  // ── Tap the card to toggle ────────────────────────────────────────────
+  var wrapper = document.getElementById('card-wrapper');
+  if (wrapper) {
+    wrapper.addEventListener('click', function () { window.flipCard(); });
+  }
+
+  // ── Keyboard shortcuts ────────────────────────────────────────────────
+  document.addEventListener('keydown', function (e) {
+    var inner   = document.getElementById('card-inner');
+    if (!inner) return;
+    var flipped = inner.classList.contains('flipped');
+    if (e.key === ' ' || e.key === 'Enter') {
+      e.preventDefault();
+      if (window.flipCard) window.flipCard();
+      return;
+    }
+    if (flipped) {
+      var map = { '1': 0, '2': 1, '3': 2, '4': 3 };
+      if (map.hasOwnProperty(e.key)) {
+        e.preventDefault();
+        var btn = document.querySelector('[data-rating="' + map[e.key] + '"]');
+        if (btn) { setTimeSpent(); btn.click(); }
+      }
+    }
+  });
+
+  // ── Text-to-Speech ────────────────────────────────────────────────────
+  window.speakText = function (text, lang) {
+    if (!window.speechSynthesis) return;
+    window.speechSynthesis.cancel();
+    var utt = new SpeechSynthesisUtterance(text);
+    utt.lang  = lang || 'en-US';
+    utt.rate  = 0.85;
+    utt.pitch = 1.0;
+    document.querySelectorAll('.speak-btn').forEach(function (b) {
+      b.classList.remove('ring-2', 'ring-[#4abe74]', 'ring-offset-1');
+    });
+    var evt = window.event;
+    if (evt && evt.currentTarget) {
+      evt.currentTarget.classList.add('ring-2', 'ring-[#4abe74]', 'ring-offset-1');
+      utt.onend = function () {
+        evt.currentTarget.classList.remove('ring-2', 'ring-[#4abe74]', 'ring-offset-1');
+      };
+    }
+    window.speechSynthesis.speak(utt);
+  };
+})();
+</script>
+
+{% endif %}

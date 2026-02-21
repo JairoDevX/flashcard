@@ -1,0 +1,97 @@
+/* ── Card Flip Animation ──────────────────────────────────────────────────── */
+.perspective {
+  perspective: 1200px;
+}
+
+.card-inner {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  transition: transform 0.55s cubic-bezier(0.4, 0, 0.2, 1);
+  transform-style: preserve-3d;
+}
+
+.card-inner.flipped {
+  transform: rotateY(180deg);
+}
+
+.card-face {
+  position: absolute;
+  inset: 0;
+  backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
+}
+
+.card-back-face {
+  transform: rotateY(180deg);
+}
+
+/* ── Scrollbar hiding ─────────────────────────────────────────────────────── */
+.hide-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+.hide-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+
+/* ── Safe-area padding ────────────────────────────────────────────────────── */
+.pt-safe {
+  padding-top: env(safe-area-inset-top, 0);
+}
+.pb-safe {
+  padding-bottom: env(safe-area-inset-bottom, 16px);
+}
+
+/* ── Page transitions ─────────────────────────────────────────────────────── */
+.htmx-swapping {
+  opacity: 0;
+  transition: opacity 0.15s ease-out;
+}
+.htmx-settling {
+  opacity: 1;
+  transition: opacity 0.2s ease-in;
+}
+
+/* ── Form field focus ─────────────────────────────────────────────────────── */
+.field-input {
+  width: 100%;
+  padding: 0.75rem 1rem;
+  border: 1.5px solid #e5e7eb;
+  border-radius: 0.875rem;
+  font-size: 1rem;
+  outline: none;
+  background: white;
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+.field-input:focus {
+  border-color: #ABE5BC;
+  box-shadow: 0 0 0 3px rgba(171, 229, 188, 0.25);
+}
+
+/* ── Rating button press animation ───────────────────────────────────────── */
+.rating-btn {
+  transition: transform 0.1s, opacity 0.1s;
+}
+.rating-btn:active {
+  transform: scale(0.95);
+  opacity: 0.85;
+}
+
+/* ── Nav active indicator ─────────────────────────────────────────────────── */
+.nav-item.active svg {
+  stroke: #4abe74;
+}
+.nav-item.active span {
+  color: #4abe74;
+  font-weight: 600;
+}
+
+/* ── Fade-in animation (HTMX swaps) ──────────────────────────────────────── */
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(6px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+.animate-fade {
+  animation: fadeIn 0.25s ease-out forwards;
+}

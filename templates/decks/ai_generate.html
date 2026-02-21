@@ -1,0 +1,168 @@
+{% extends 'base.html' %}
+{% block title %}Gerar Cards com IA – {{ deck.name }}{% endblock %}
+
+{% block content %}
+<div class="min-h-screen bg-gradient-to-br from-cream to-[#CFADE8]/10">
+
+  <div class="bg-white/85 backdrop-blur-sm border-b border-gray-100 px-5 py-4 pt-safe">
+    <div class="flex items-center gap-3 max-w-xl mx-auto">
+      <a href="{% url 'deck_detail' deck.pk %}" class="text-gray-400 hover:text-gray-600 p-1 -ml-1">
+        <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7"/>
+        </svg>
+      </a>
+      <div>
+        <h1 class="text-lg font-semibold text-gray-800">✨ Gerar com IA</h1>
+        <p class="text-xs text-gray-400">{{ deck.name }}</p>
+      </div>
+    </div>
+  </div>
+
+  <div class="px-4 py-6 max-w-xl mx-auto space-y-5">
+
+    <!-- Generate form -->
+    {% if not generated_cards %}
+    <div class="bg-white rounded-3xl shadow-sm border border-gray-100 p-6">
+      <div class="flex items-center gap-3 mb-5">
+        <div class="w-10 h-10 bg-gradient-to-br from-[#CFADE8] to-[#9b6dc2] rounded-2xl flex items-center justify-center flex-shrink-0">
+          <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"/>
+          </svg>
+        </div>
+        <div>
+          <p class="font-semibold text-gray-800">Geração Inteligente de Cards</p>
+          <p class="text-xs text-gray-400">Usando Claude Haiku · Rápido e econômico</p>
+        </div>
+      </div>
+
+      {% if error %}
+      <div class="bg-red-50 border border-red-200 text-red-700 rounded-2xl px-4 py-3 text-sm mb-4 flex items-start gap-2">
+        <svg class="w-4 h-4 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/>
+        </svg>
+        {{ error }}
+      </div>
+      {% endif %}
+
+      <form method="post">
+        {% csrf_token %}
+        <input type="hidden" name="action" value="generate">
+
+        <div class="mb-4">
+          <label class="block text-sm font-semibold text-gray-700 mb-2">Cole o texto ou descreva o tópico</label>
+          <textarea name="text" rows="8" required
+                    class="w-full px-4 py-3 border border-gray-200 rounded-2xl text-sm resize-none focus:outline-none focus:ring-2 focus:ring-[#CFADE8] focus:border-transparent transition-all"
+                    placeholder="Ex: 'Vocabulário de verbos irregulares em inglês no passado...' ou cole um texto completo.">{{ user_text }}</textarea>
+          <p class="text-xs text-gray-400 mt-1.5">Quanto mais contexto, melhores os cards gerados.</p>
+        </div>
+
+        <button type="submit" id="gen-btn"
+                class="w-full py-3.5 bg-gradient-to-r from-[#CFADE8] to-[#9b6dc2] text-white font-bold rounded-2xl shadow-md hover:opacity-95 active:scale-[0.98] transition-all flex items-center justify-center gap-2">
+          <svg class="w-5 h-5" id="gen-icon" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M13 10V3L4 14h7v7l9-11h-7z"/>
+          </svg>
+          <span id="gen-text">Gerar Cards</span>
+        </button>
+      </form>
+
+      <!-- Tips -->
+      <div class="mt-5 pt-5 border-t border-gray-50">
+        <p class="text-xs font-semibold text-gray-500 mb-2">💡 Dicas para melhores resultados</p>
+        <ul class="space-y-1 text-xs text-gray-400">
+          <li>• Cole textos de livros, artigos ou anotações</li>
+          <li>• Descreva um tópico específico ("verbos irregulares em inglês")</li>
+          <li>• A IA gera cards normais e cloze automaticamente</li>
+          <li>• Revise e selecione apenas os cards que quiser salvar</li>
+        </ul>
+      </div>
+    </div>
+
+    {% else %}
+    <!-- Preview & Save -->
+    <div class="bg-white rounded-3xl shadow-sm border border-gray-100 p-5">
+      <div class="flex items-center justify-between mb-4">
+        <h2 class="font-semibold text-gray-800">{{ generated_cards|length }} cards gerados</h2>
+        <span class="text-xs text-gray-400 bg-gray-50 px-3 py-1 rounded-full">Selecione os que deseja salvar</span>
+      </div>
+
+      <form method="post" id="save-form">
+        {% csrf_token %}
+        <input type="hidden" name="action" value="save_cards">
+        <input type="hidden" name="text" value="{{ user_text }}">
+        <input type="hidden" name="cards_json" value="{{ cards_json }}">
+
+        <div class="space-y-3 mb-5" id="cards-list">
+          {% for card in generated_cards %}
+          <label class="block cursor-pointer">
+            <div class="flex items-start gap-3 p-4 rounded-2xl border-2 border-gray-100 hover:border-[#CFADE8]/60 transition-all card-item" data-index="{{ forloop.counter0 }}">
+              <input type="checkbox" name="selected_cards" value="{{ forloop.counter0 }}"
+                     class="mt-1 accent-[#9b6dc2] w-4 h-4 flex-shrink-0" checked>
+              <div class="flex-1 min-w-0">
+                <div class="flex items-center gap-2 mb-1.5">
+                  {% if card.card_type == 'cloze' %}
+                  <span class="text-xs font-semibold bg-[#CFADE8]/30 text-purple-700 px-2 py-0.5 rounded-full">Cloze</span>
+                  {% else %}
+                  <span class="text-xs font-semibold bg-[#ABE5BC]/30 text-green-700 px-2 py-0.5 rounded-full">Normal</span>
+                  {% endif %}
+                </div>
+                <p class="text-sm font-medium text-gray-800 mb-1">{{ card.front }}</p>
+                <p class="text-xs text-gray-500">{{ card.back }}</p>
+              </div>
+            </div>
+          </label>
+          {% endfor %}
+        </div>
+
+        <div class="flex gap-2.5">
+          <button type="submit"
+                  class="flex-1 py-3.5 bg-gradient-to-r from-[#ABE5BC] to-[#4abe74] text-white font-bold rounded-2xl shadow-md hover:opacity-95 active:scale-[0.98] transition-all">
+            Salvar Selecionados
+          </button>
+          <a href="{% url 'ai_generate' deck.pk %}?text={{ user_text|urlencode }}"
+             onclick="this.href='{% url 'ai_generate' deck.pk %}';"
+             class="flex-1 py-3.5 bg-white border-2 border-[#CFADE8] text-purple-700 font-semibold rounded-2xl hover:bg-[#CFADE8]/10 active:scale-[0.98] transition-all text-sm text-center">
+            Gerar Novamente
+          </a>
+        </div>
+      </form>
+    </div>
+
+    <!-- Select all / none -->
+    <div class="flex gap-3 px-1">
+      <button onclick="toggleAll(true)" class="text-xs text-[#4abe74] font-medium hover:underline">Selecionar todos</button>
+      <span class="text-gray-300">·</span>
+      <button onclick="toggleAll(false)" class="text-xs text-gray-400 font-medium hover:underline">Desmarcar todos</button>
+    </div>
+    {% endif %}
+
+  </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+  // Show loading state on generate
+  var form = document.querySelector('form');
+  if (form) {
+    form.addEventListener('submit', function(e) {
+      if (form.querySelector('[name=action]') && form.querySelector('[name=action]').value === 'generate') {
+        var btn = document.getElementById('gen-btn');
+        var icon = document.getElementById('gen-icon');
+        var txt  = document.getElementById('gen-text');
+        if (btn) {
+          btn.disabled = true;
+          btn.classList.add('opacity-75');
+          if (txt) txt.textContent = 'Gerando...';
+          if (icon) icon.innerHTML = '<path stroke-linecap="round" stroke-linejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>';
+        }
+      }
+    });
+  }
+});
+
+function toggleAll(select) {
+  document.querySelectorAll('input[name=selected_cards]').forEach(function(cb) {
+    cb.checked = select;
+  });
+}
+</script>
+{% endblock %}

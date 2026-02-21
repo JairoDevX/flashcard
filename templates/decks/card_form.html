@@ -1,0 +1,173 @@
+{% extends 'base.html' %}
+{% block title %}{{ action }} Card – {{ deck.name }}{% endblock %}
+
+{% block content %}
+<div class="min-h-screen bg-gradient-to-br from-cream to-[#FFD787]/10">
+
+  <div class="bg-white/85 backdrop-blur-sm border-b border-gray-100 px-5 py-4 pt-safe">
+    <div class="flex items-center gap-3 max-w-xl mx-auto">
+      <a href="{% url 'deck_detail' deck.pk %}" class="text-gray-400 hover:text-gray-600 p-1 -ml-1">
+        <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7"/>
+        </svg>
+      </a>
+      <div>
+        <h1 class="text-lg font-semibold text-gray-800">{{ action }} Card</h1>
+        <p class="text-xs text-gray-400">{{ deck.name }}</p>
+      </div>
+    </div>
+  </div>
+
+  <div class="px-4 py-6 max-w-xl mx-auto">
+    <div class="bg-white rounded-3xl shadow-sm border border-gray-100 p-6">
+      <form method="post">
+        {% csrf_token %}
+        <div class="space-y-4">
+
+          <!-- Card Type -->
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-2">Tipo do Card</label>
+            <div class="grid grid-cols-2 gap-2" id="card-type-selector">
+              <label class="flex items-center gap-2 p-3 rounded-2xl border-2 cursor-pointer transition-all
+                            border-[#ABE5BC] bg-[#ABE5BC]/10 card-type-option" data-value="normal">
+                <input type="radio" name="card_type" value="normal" class="hidden"
+                       {% if not form.card_type.value or form.card_type.value == 'normal' %}checked{% endif %}>
+                <span class="w-8 h-8 rounded-xl bg-[#ABE5BC]/30 flex items-center justify-center text-green-700 font-bold text-sm flex-shrink-0">N</span>
+                <div>
+                  <p class="text-sm font-semibold text-gray-800">Normal</p>
+                  <p class="text-xs text-gray-400">Pergunta / Resposta</p>
+                </div>
+              </label>
+              <label class="flex items-center gap-2 p-3 rounded-2xl border-2 cursor-pointer transition-all
+                            border-gray-200 bg-white card-type-option" data-value="cloze">
+                <input type="radio" name="card_type" value="cloze" class="hidden"
+                       {% if form.card_type.value == 'cloze' %}checked{% endif %}>
+                <span class="w-8 h-8 rounded-xl bg-[#CFADE8]/30 flex items-center justify-center text-purple-700 font-bold text-sm flex-shrink-0">C</span>
+                <div>
+                  <p class="text-sm font-semibold text-gray-800">Cloze</p>
+                  <p class="text-xs text-gray-400">Preencher lacuna</p>
+                </div>
+              </label>
+            </div>
+          </div>
+
+          <!-- Cloze help -->
+          <div id="cloze-hint" class="hidden bg-[#CFADE8]/15 border border-[#CFADE8]/40 rounded-2xl p-3">
+            <p class="text-xs font-semibold text-purple-700 mb-1">Como usar Cloze:</p>
+            <p class="text-xs text-gray-600">Na frente, coloque o texto com <code class="bg-[#CFADE8]/40 px-1 rounded">{{palavra}}</code> para cada lacuna.</p>
+            <p class="text-xs text-gray-500 mt-1">Exemplo: <em>"A capital do Brasil é {{Brasília}}"</em></p>
+            <p class="text-xs text-gray-500">No verso, coloque a frase ou contexto completo.</p>
+          </div>
+
+          <!-- Front -->
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-1.5" id="front-label">
+              <span class="inline-flex items-center gap-1.5">
+                <span class="w-5 h-5 bg-gradient-to-br from-[#ABE5BC] to-[#4abe74] rounded-md flex items-center justify-center text-white text-xs font-bold">F</span>
+                <span id="front-label-text">Frente (Pergunta) *</span>
+              </span>
+            </label>
+            <textarea name="front" id="id_front" rows="3"
+                      class="field-input resize-none{% if form.front.errors %} border-red-400{% endif %}"
+                      placeholder="O que você quer aprender?" required>{{ form.front.value|default:'' }}</textarea>
+            {% if form.front.errors %}
+            <p class="text-xs text-red-500 mt-1">{{ form.front.errors|join:" " }}</p>
+            {% endif %}
+          </div>
+
+          <!-- Back -->
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-1.5" id="back-label">
+              <span class="inline-flex items-center gap-1.5">
+                <span class="w-5 h-5 bg-gradient-to-br from-[#CFADE8] to-[#9b6dc2] rounded-md flex items-center justify-center text-white text-xs font-bold">V</span>
+                <span id="back-label-text">Verso (Resposta) *</span>
+              </span>
+            </label>
+            <textarea name="back" rows="3"
+                      class="field-input resize-none{% if form.back.errors %} border-red-400{% endif %}"
+                      placeholder="A resposta ou tradução" required>{{ form.back.value|default:'' }}</textarea>
+            {% if form.back.errors %}
+            <p class="text-xs text-red-500 mt-1">{{ form.back.errors|join:" " }}</p>
+            {% endif %}
+          </div>
+
+          <!-- Tags -->
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-1.5">Tags (opcional)</label>
+            <input type="text" name="tags"
+                   value="{{ form.tags.value|default:'' }}"
+                   class="field-input"
+                   placeholder="verbo, gramática, básico">
+            <p class="text-xs text-gray-400 mt-1">Separe com vírgulas</p>
+          </div>
+
+        </div>
+
+        <div class="flex gap-3 mt-6">
+          <button type="submit"
+                  class="flex-1 py-3.5 bg-gradient-to-r from-[#ABE5BC] to-[#4abe74] text-white font-semibold rounded-2xl shadow-md hover:opacity-95 active:scale-[0.98] transition-all">
+            {% if action == 'Criar' %}Salvar Card{% else %}Atualizar Card{% endif %}
+          </button>
+          {% if action == 'Criar' %}
+          <button type="submit" name="add_another" value="1"
+                  class="flex-1 py-3.5 bg-white border-2 border-[#ABE5BC] text-[#4abe74] font-semibold rounded-2xl hover:bg-[#ABE5BC]/10 active:scale-[0.98] transition-all text-sm">
+            Salvar + Outro
+          </button>
+          {% endif %}
+        </div>
+      </form>
+    </div>
+
+    {% if card %}
+    <div class="mt-4">
+      <a href="{% url 'card_delete' deck.pk card.pk %}"
+         class="block w-full py-3 text-center text-red-400 text-sm hover:text-red-600 transition-colors">
+        Excluir este card
+      </a>
+    </div>
+    {% endif %}
+  </div>
+</div>
+
+<script>
+(function() {
+  var options = document.querySelectorAll('.card-type-option');
+  var clozeHint = document.getElementById('cloze-hint');
+  var frontLabelText = document.getElementById('front-label-text');
+  var frontInput = document.getElementById('id_front');
+
+  function updateUI(val) {
+    options.forEach(function(opt) {
+      var isSelected = opt.dataset.value === val;
+      opt.classList.toggle('border-[#CFADE8]', isSelected && val === 'cloze');
+      opt.classList.toggle('bg-[#CFADE8]/10', isSelected && val === 'cloze');
+      opt.classList.toggle('border-[#ABE5BC]', isSelected && val === 'normal');
+      opt.classList.toggle('bg-[#ABE5BC]/10', isSelected && val === 'normal');
+      opt.classList.toggle('border-gray-200', !isSelected);
+      opt.classList.toggle('bg-white', !isSelected);
+    });
+    if (val === 'cloze') {
+      clozeHint.classList.remove('hidden');
+      frontLabelText.textContent = 'Texto com Lacunas *';
+      frontInput.placeholder = 'Ex: A capital do Brasil é {{Brasília}}';
+    } else {
+      clozeHint.classList.add('hidden');
+      frontLabelText.textContent = 'Frente (Pergunta) *';
+      frontInput.placeholder = 'O que você quer aprender?';
+    }
+  }
+
+  options.forEach(function(opt) {
+    opt.addEventListener('click', function() {
+      var radio = opt.querySelector('input[type=radio]');
+      radio.checked = true;
+      updateUI(opt.dataset.value);
+    });
+  });
+
+  // init on load
+  var checked = document.querySelector('input[name=card_type]:checked');
+  if (checked) updateUI(checked.value);
+})();
+</script>
+{% endblock %}

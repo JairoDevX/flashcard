@@ -1,0 +1,126 @@
+{% extends 'base.html' %}
+{% block title %}Início – FlashCards{% endblock %}
+
+{% block content %}
+<div class="min-h-screen bg-gradient-to-br from-cream to-[#ABE5BC]/15 hide-scrollbar overflow-y-auto">
+
+  <!-- ── Header ──────────────────────────────────────────────────────────── -->
+  <div class="bg-white/85 backdrop-blur-sm border-b border-[#ABE5BC]/25 px-5 py-4 pt-safe">
+    <div class="flex items-center justify-between max-w-xl mx-auto">
+      <div>
+        <h1 class="text-xl font-semibold text-gray-800">Olá, {{ user.first_name|default:user.username }}! 👋</h1>
+        <p class="text-sm text-gray-500 mt-0.5">Pronto para estudar hoje?</p>
+      </div>
+      <div class="w-11 h-11 rounded-full bg-gradient-to-br from-[#CFADE8] to-[#ABE5BC] flex items-center justify-center shadow-md">
+        <span class="text-white font-bold text-lg">{{ user.username|first|upper }}</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="px-4 py-5 space-y-5 max-w-xl mx-auto">
+
+    <!-- ── Stats row ──────────────────────────────────────────────────────── -->
+    <div class="grid grid-cols-3 gap-3">
+      <!-- Streak -->
+      <div class="bg-white rounded-2xl p-4 shadow-sm border border-[#FFA776]/15 flex flex-col items-center gap-1">
+        <span class="text-2xl">🔥</span>
+        <span class="text-xl font-bold text-gray-800">{{ streak }}</span>
+        <span class="text-xs text-gray-500">Sequência</span>
+      </div>
+      <!-- Due today -->
+      <div class="bg-white rounded-2xl p-4 shadow-sm border border-[#CFADE8]/15 flex flex-col items-center gap-1">
+        <span class="text-2xl">📋</span>
+        <span class="text-xl font-bold text-gray-800">{{ due_count }}</span>
+        <span class="text-xs text-gray-500">Revisões</span>
+      </div>
+      <!-- New cards -->
+      <div class="bg-white rounded-2xl p-4 shadow-sm border border-[#ABE5BC]/15 flex flex-col items-center gap-1">
+        <span class="text-2xl">✨</span>
+        <span class="text-xl font-bold text-gray-800">{{ new_count }}</span>
+        <span class="text-xs text-gray-500">Novas</span>
+      </div>
+    </div>
+
+    <!-- ── Study CTA ──────────────────────────────────────────────────────── -->
+    {% if queue_count > 0 %}
+    <a href="{% url 'study_session' %}"
+       class="block w-full py-4 bg-gradient-to-r from-[#ABE5BC] to-[#4abe74] text-white text-center text-lg font-semibold rounded-2xl shadow-lg hover:opacity-95 active:scale-[0.98] transition-all">
+      Começar Sessão &rarr; <span class="opacity-80 text-base font-normal">({{ queue_count }} cards)</span>
+    </a>
+    {% else %}
+    <div class="w-full py-4 bg-gradient-to-r from-[#ABE5BC]/40 to-[#4abe74]/30 text-green-700 text-center text-base font-semibold rounded-2xl">
+      🎉 Tudo em dia! Sem cards para hoje.
+    </div>
+    {% endif %}
+
+    <!-- ── Decks ──────────────────────────────────────────────────────────── -->
+    <div>
+      <div class="flex items-center justify-between mb-3">
+        <h2 class="text-base font-semibold text-gray-700">Meus Decks</h2>
+        <a href="{% url 'deck_create' %}"
+           class="text-sm text-[#4abe74] font-medium hover:underline flex items-center gap-1">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4"/>
+          </svg>
+          Novo
+        </a>
+      </div>
+
+      {% if decks %}
+      <div class="space-y-3">
+        {% for deck in decks %}
+        {% with colors="#ABE5BC,#CFADE8,#FFA776,#FFA89A,#FFD787" %}
+        <a href="{% url 'deck_detail' deck.pk %}"
+           class="block bg-white rounded-2xl p-4 shadow-sm border border-gray-100 hover:shadow-md active:scale-[0.99] transition-all">
+          <div class="flex items-center gap-3">
+            <div class="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0"
+                 style="background: linear-gradient(135deg, #ABE5BC33, #CFADE833)">
+              <svg class="w-5 h-5 text-[#4abe74]" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round"
+                      d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"/>
+              </svg>
+            </div>
+            <div class="flex-1 min-w-0">
+              <p class="font-medium text-gray-800 truncate">{{ deck.name }}</p>
+              <p class="text-xs text-gray-400 mt-0.5">{{ deck.card_count }} card{{ deck.card_count|pluralize:"s" }}</p>
+            </div>
+            <div class="flex flex-col items-end gap-1">
+              {% with due=deck.due_count %}
+              {% if due > 0 %}
+              <span class="text-xs bg-[#CFADE8]/30 text-purple-700 px-2 py-0.5 rounded-full font-medium">
+                {{ due }} p/ revisar
+              </span>
+              {% endif %}
+              {% endwith %}
+              {% with new=deck.new_count %}
+              {% if new > 0 %}
+              <span class="text-xs bg-[#ABE5BC]/30 text-green-700 px-2 py-0.5 rounded-full font-medium">
+                {{ new }} novas
+              </span>
+              {% endif %}
+              {% endwith %}
+            </div>
+          </div>
+          {% if deck.description %}
+          <p class="text-xs text-gray-400 mt-2 ml-13 truncate">{{ deck.description }}</p>
+          {% endif %}
+        </a>
+        {% endwith %}
+        {% endfor %}
+      </div>
+      {% else %}
+      <div class="bg-white rounded-2xl p-8 text-center shadow-sm border border-dashed border-gray-200">
+        <p class="text-4xl mb-3">📚</p>
+        <p class="text-gray-500 font-medium">Nenhum deck ainda</p>
+        <p class="text-sm text-gray-400 mt-1">Crie seu primeiro deck para começar!</p>
+        <a href="{% url 'deck_create' %}"
+           class="mt-4 inline-block px-5 py-2.5 bg-gradient-to-r from-[#ABE5BC] to-[#4abe74] text-white font-semibold rounded-xl shadow-sm hover:opacity-90 transition-all text-sm">
+          Criar Deck
+        </a>
+      </div>
+      {% endif %}
+    </div>
+
+  </div>
+</div>
+{% endblock %}

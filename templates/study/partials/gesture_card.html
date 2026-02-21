@@ -1,0 +1,215 @@
+<!-- ── Gesture Card Partial (HTMX swapped) ───────────────────────────────── -->
+<div id="gesture-card-wrap" class="flex flex-col h-full">
+
+  <!-- Swipe hints (background) -->
+  <div class="absolute inset-x-4 top-1/2 -translate-y-1/2 flex justify-between pointer-events-none px-4 opacity-30 transition-opacity duration-300"
+       id="swipe-hints">
+    <div class="flex flex-col items-center gap-2 text-orange-400">
+      <div class="w-12 h-12 rounded-full border-2 border-orange-400 bg-orange-400/10
+                  flex items-center justify-center">
+        <svg class="w-7 h-7" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/>
+        </svg>
+      </div>
+      <span class="text-sm font-black uppercase tracking-wide">Difícil</span>
+    </div>
+    <div class="flex flex-col items-center gap-2 text-[#4abe74]">
+      <div class="w-12 h-12 rounded-full border-2 border-[#4abe74] bg-[#4abe74]/10
+                  flex items-center justify-center">
+        <svg class="w-7 h-7" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/>
+        </svg>
+      </div>
+      <span class="text-sm font-black uppercase tracking-wide">Fácil</span>
+    </div>
+  </div>
+
+  <!-- The Card (draggable) -->
+  <div id="gesture-card"
+       class="relative w-full rounded-[2rem] bg-white shadow-2xl border border-gray-100
+              flex flex-col overflow-hidden select-none cursor-grab active:cursor-grabbing"
+       style="height: 65dvh; min-height: 340px;">
+
+    <!-- Card image/icon area -->
+    <div class="flex-1 bg-gradient-to-br from-[#ABE5BC]/10 to-[#CFADE8]/10
+                flex items-center justify-center relative overflow-hidden p-6">
+      <!-- Blob bg -->
+      <div class="absolute w-48 h-48 bg-[#ABE5BC]/20 rounded-full blur-3xl top-1/2 left-1/2
+                  -translate-x-1/2 -translate-y-1/2 pointer-events-none"></div>
+      <!-- Card type icon -->
+      <div class="relative z-10 text-center">
+        <div class="text-6xl mb-2">
+          {% if card.card_type == 'cloze' %}📝{% else %}📖{% endif %}
+        </div>
+        <p class="text-sm text-gray-400 font-medium">{{ card.deck.name }}</p>
+      </div>
+      <!-- Speaker button -->
+      <button onclick="speakText('{{ card.front|escapejs }}', '{{ card.deck.front_language }}')"
+              class="absolute top-4 right-4 w-9 h-9 bg-white/80 backdrop-blur-sm
+                     rounded-full flex items-center justify-center text-[#4abe74]
+                     shadow-sm hover:bg-white transition-all active:scale-95">
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round"
+                d="M15.536 8.464a5 5 0 010 7.072M12 6v12m0 0l-3-3m3 3l3-3"/>
+        </svg>
+      </button>
+    </div>
+
+    <!-- Card content area -->
+    <div class="flex flex-col items-center justify-center px-6 py-5 gap-2 bg-white">
+      <h2 class="text-3xl font-black text-gray-800 text-center leading-tight">
+        {{ card.front }}
+      </h2>
+      <!-- Answer (hidden until hint clicked) -->
+      <p id="gesture-answer-text"
+         class="text-base text-[#4abe74] font-medium text-center hidden transition-all">
+        {{ card.back }}
+      </p>
+      <!-- Hint button -->
+      <button id="gesture-hint-btn"
+              onclick="showGestureHint()"
+              class="flex items-center gap-2 px-4 py-2 bg-gray-50 hover:bg-gray-100
+                     text-gray-500 hover:text-[#4abe74] rounded-full transition-all
+                     text-sm font-medium mt-1 active:scale-95">
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round"
+                d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"/>
+        </svg>
+        Ver resposta
+      </button>
+    </div>
+
+    <!-- Drag result indicator (shows during drag) -->
+    <div id="gesture-drag-indicator"
+         class="absolute inset-0 rounded-[2rem] pointer-events-none opacity-0 transition-opacity duration-150
+                flex items-center justify-center">
+      <div id="gesture-drag-icon" class="w-16 h-16 rounded-full flex items-center justify-center
+                                          text-white text-2xl shadow-xl">
+      </div>
+    </div>
+  </div>
+
+  <!-- Hidden forms for HTMX -->
+  <form id="gesture-hard-form"
+        hx-post="{% url 'gesture_answer' %}"
+        hx-target="#gesture-area"
+        hx-swap="innerHTML"
+        class="hidden">
+    {% csrf_token %}
+    <input type="hidden" name="card_id" value="{{ card.id }}">
+    <input type="hidden" name="rating" value="1">
+  </form>
+
+  <form id="gesture-easy-form"
+        hx-post="{% url 'gesture_answer' %}"
+        hx-target="#gesture-area"
+        hx-swap="innerHTML"
+        class="hidden">
+    {% csrf_token %}
+    <input type="hidden" name="card_id" value="{{ card.id }}">
+    <input type="hidden" name="rating" value="3">
+  </form>
+
+</div>
+
+<script>
+(function() {
+  var card   = document.getElementById('gesture-card');
+  var startX = 0, startY = 0, curX = 0;
+  var dragging = false;
+  var threshold = 80;
+
+  function setTransform(dx) {
+    var rotate = dx / 20;
+    card.style.transform  = 'translateX(' + dx + 'px) rotate(' + rotate + 'deg)';
+    card.style.transition = 'none';
+
+    var ind  = document.getElementById('gesture-drag-indicator');
+    var icon = document.getElementById('gesture-drag-icon');
+    if (!ind || !icon) return;
+
+    var pct = Math.min(Math.abs(dx) / threshold, 1);
+    ind.style.opacity = pct * 0.7;
+
+    if (dx > 0) {
+      ind.style.background = 'rgba(74, 190, 116, 0.15)';
+      icon.style.background = '#4abe74';
+      icon.innerHTML = '<svg class="w-8 h-8" fill="none" stroke="white" stroke-width="3" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/></svg>';
+    } else {
+      ind.style.background = 'rgba(251, 146, 60, 0.15)';
+      icon.style.background = '#fb923c';
+      icon.innerHTML = '<svg class="w-8 h-8" fill="none" stroke="white" stroke-width="3" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg>';
+    }
+  }
+
+  function resetCard() {
+    card.style.transform  = '';
+    card.style.transition = 'transform 0.3s ease';
+    var ind = document.getElementById('gesture-drag-indicator');
+    if (ind) ind.style.opacity = 0;
+  }
+
+  function fling(direction) {
+    var flyX = direction === 'easy' ? window.innerWidth : -window.innerWidth;
+    card.style.transform  = 'translateX(' + flyX + 'px) rotate(' + (direction === 'easy' ? 20 : -20) + 'deg)';
+    card.style.transition = 'transform 0.3s ease';
+    card.style.opacity    = '0';
+    var form = direction === 'easy'
+               ? document.getElementById('gesture-easy-form')
+               : document.getElementById('gesture-hard-form');
+    setTimeout(function() {
+      if (form) htmx.trigger(form, 'submit');
+    }, 280);
+    if (typeof playSound !== 'undefined') playSound(direction === 'easy' ? 'easy' : 'hard');
+  }
+
+  // Touch events
+  card.addEventListener('touchstart', function(e) {
+    startX  = e.touches[0].clientX;
+    startY  = e.touches[0].clientY;
+    dragging = true;
+  }, { passive: true });
+
+  card.addEventListener('touchmove', function(e) {
+    if (!dragging) return;
+    curX = e.touches[0].clientX - startX;
+    setTransform(curX);
+  }, { passive: true });
+
+  card.addEventListener('touchend', function() {
+    if (!dragging) return;
+    dragging = false;
+    if (curX > threshold) { fling('easy'); }
+    else if (curX < -threshold) { fling('hard'); }
+    else { resetCard(); }
+  });
+
+  // Mouse events (desktop)
+  card.addEventListener('mousedown', function(e) {
+    startX   = e.clientX;
+    dragging = true;
+    e.preventDefault();
+  });
+  window.addEventListener('mousemove', function(e) {
+    if (!dragging) return;
+    curX = e.clientX - startX;
+    setTransform(curX);
+  });
+  window.addEventListener('mouseup', function() {
+    if (!dragging) return;
+    dragging = false;
+    if (curX > threshold) { fling('easy'); }
+    else if (curX < -threshold) { fling('hard'); }
+    else { resetCard(); }
+  });
+
+  // Hint
+  window.showGestureHint = function() {
+    var ans = document.getElementById('gesture-answer-text');
+    var btn = document.getElementById('gesture-hint-btn');
+    if (ans) ans.classList.remove('hidden');
+    if (btn) btn.classList.add('hidden');
+    if (typeof speakText !== 'undefined') speakText('{{ card.back|escapejs }}', '{{ card.deck.back_language }}');
+  };
+})();
+</script>
