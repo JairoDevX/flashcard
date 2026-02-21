@@ -89,6 +89,28 @@
     </div>
     {% endif %}
 
+    <!-- Streak badge -->
+    {% if trail.streak > 0 %}
+    <div class="bg-gradient-to-r from-[#FFD787]/30 to-[#FFA776]/20 rounded-2xl p-4 mb-4
+                flex items-center gap-3 border border-[#FFD787]/40">
+      <span class="text-3xl">🔥</span>
+      <div>
+        <p class="font-bold text-amber-700">{{ trail.streak }} dia{{ trail.streak|pluralize:"s" }} seguido{{ trail.streak|pluralize:"s" }}!</p>
+        <p class="text-xs text-amber-600">Continue assim para manter a sequência.</p>
+      </div>
+    </div>
+    {% endif %}
+
+    <!-- Grammar notes -->
+    {% if lesson.grammar_notes %}
+    <div class="bg-white rounded-3xl shadow-lg p-5 mb-4 border-l-4 border-[#CFADE8]">
+      <h2 class="text-xs font-bold text-purple-600 uppercase tracking-widest mb-3 flex items-center gap-1.5">
+        <span>📌</span> Notas de Gramática
+      </h2>
+      <div class="text-sm text-gray-700 leading-relaxed whitespace-pre-line">{{ lesson.grammar_notes }}</div>
+    </div>
+    {% endif %}
+
     <!-- Performance message -->
     <div class="text-center mb-5 text-sm text-gray-500 bg-white/60 rounded-2xl px-4 py-3">
       {% if accuracy >= 90 %}

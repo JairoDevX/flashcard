@@ -27,6 +27,12 @@
       </svg>
     </div>
 
+    {% if card.context_sentence %}
+    <p class="text-xs text-gray-400 italic text-center bg-gray-50 rounded-xl px-3 py-2 w-full">
+      💡 {{ card.context_sentence }}
+    </p>
+    {% endif %}
+
     <!-- Sentence with blank -->
     <p class="text-xl font-semibold text-center text-gray-800 leading-relaxed" id="cloze-sentence">
       {{ cloze_before }}<span id="cloze-blank"

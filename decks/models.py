@@ -60,20 +60,27 @@ class Deck(models.Model):
 class Card(models.Model):
     CARD_TYPE_NORMAL = 'normal'
     CARD_TYPE_CLOZE = 'cloze'
+    CARD_TYPE_TRANSLATION = 'translation'
     CARD_TYPE_CHOICES = [
         ('normal', 'Normal'),
         ('cloze', 'Cloze (lacuna)'),
+        ('translation', 'Tradução'),
     ]
 
     deck = models.ForeignKey(Deck, on_delete=models.CASCADE, related_name="cards")
     card_type = models.CharField(
-        max_length=10,
+        max_length=15,
         choices=CARD_TYPE_CHOICES,
         default='normal',
         verbose_name='Tipo do card',
     )
     front = models.TextField()
     back = models.TextField()
+    context_sentence = models.TextField(
+        blank=True,
+        verbose_name='Frase de contexto',
+        help_text='Frase completa onde a palavra/expressão aparece. Ex: "I go to the store every day."',
+    )
     tags = models.CharField(max_length=500, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)

@@ -49,6 +49,17 @@
                 </div>
               </label>
             </div>
+            <!-- Translation type (full width) -->
+            <label class="flex items-center gap-2 p-3 rounded-2xl border-2 cursor-pointer transition-all
+                          border-gray-200 bg-white card-type-option" data-value="translation">
+              <input type="radio" name="card_type" value="translation" class="hidden"
+                     {% if form.card_type.value == 'translation' %}checked{% endif %}>
+              <span class="w-8 h-8 rounded-xl bg-blue-50 flex items-center justify-center text-blue-600 font-bold text-sm flex-shrink-0">T</span>
+              <div>
+                <p class="text-sm font-semibold text-gray-800">Tradução</p>
+                <p class="text-xs text-gray-400">Frente EN → Verso PT (estilo Assimil)</p>
+              </div>
+            </label>
           </div>
 
           <!-- Cloze help -->
@@ -89,6 +100,20 @@
             {% if form.back.errors %}
             <p class="text-xs text-red-500 mt-1">{{ form.back.errors|join:" " }}</p>
             {% endif %}
+          </div>
+
+          <!-- Context sentence -->
+          <div id="context-sentence-block">
+            <label class="block text-sm font-medium text-gray-700 mb-1.5">
+              <span class="inline-flex items-center gap-1.5">
+                <span class="w-5 h-5 bg-blue-50 rounded-md flex items-center justify-center text-blue-600 text-xs font-bold">💡</span>
+                <span>Frase de Contexto (opcional)</span>
+              </span>
+            </label>
+            <textarea name="context_sentence" id="id_context_sentence" rows="2"
+                      class="field-input resize-none"
+                      placeholder='Ex: "I go to the store every day." — frase completa onde a palavra aparece'>{{ form.context_sentence.value|default:'' }}</textarea>
+            <p class="text-xs text-gray-400 mt-1">Ajuda a memorizar por contexto, como no método Assimil.</p>
           </div>
 
           <!-- Tags -->
@@ -139,21 +164,34 @@
   function updateUI(val) {
     options.forEach(function(opt) {
       var isSelected = opt.dataset.value === val;
-      opt.classList.toggle('border-[#CFADE8]', isSelected && val === 'cloze');
-      opt.classList.toggle('bg-[#CFADE8]/10', isSelected && val === 'cloze');
-      opt.classList.toggle('border-[#ABE5BC]', isSelected && val === 'normal');
-      opt.classList.toggle('bg-[#ABE5BC]/10', isSelected && val === 'normal');
+      var colorMap = {
+        'normal':      ['border-[#ABE5BC]',  'bg-[#ABE5BC]/10'],
+        'cloze':       ['border-[#CFADE8]',  'bg-[#CFADE8]/10'],
+        'translation': ['border-blue-300',   'bg-blue-50'],
+      };
+      var colors = colorMap[val] || colorMap['normal'];
+      opt.classList.toggle(colors[0], isSelected);
+      opt.classList.toggle(colors[1], isSelected);
       opt.classList.toggle('border-gray-200', !isSelected);
       opt.classList.toggle('bg-white', !isSelected);
     });
+
     if (val === 'cloze') {
       clozeHint.classList.remove('hidden');
       frontLabelText.textContent = 'Texto com Lacunas *';
       frontInput.placeholder = 'Ex: A capital do Brasil é {{Brasília}}';
+    } else if (val === 'translation') {
+      clozeHint.classList.add('hidden');
+      frontLabelText.textContent = 'Frase em Inglês (frente) *';
+      frontInput.placeholder = 'Ex: I go to the store every day.';
+      var backLabel = document.getElementById('back-label-text');
+      if (backLabel) backLabel.textContent = 'Tradução em Português (verso) *';
     } else {
       clozeHint.classList.add('hidden');
       frontLabelText.textContent = 'Frente (Pergunta) *';
       frontInput.placeholder = 'O que você quer aprender?';
+      var backLabel = document.getElementById('back-label-text');
+      if (backLabel) backLabel.textContent = 'Verso (Resposta) *';
     }
   }
 

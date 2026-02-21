@@ -1,4 +1,4 @@
-<!-- ── Trail Cloze Exercise Partial (HTMX swapped) ────────────────────────── -->
+<!-- ── Trail Exercise Partial (HTMX swapped) ─────────────────────────────── -->
 <div id="exercise-wrap" class="flex flex-col gap-4 animate-fade">
 
   <!-- Progress bar -->
@@ -7,9 +7,32 @@
          style="width: {{ progress_pct }}%"></div>
   </div>
 
+  <!-- Hidden HTMX form (submitted programmatically) -->
+  <form id="ex-answer-form"
+        hx-post="{% url 'lesson_answer' trail.id lesson.id %}"
+        hx-target="#trail-exercise-area"
+        hx-swap="innerHTML"
+        class="hidden">
+    {% csrf_token %}
+    <input type="hidden" name="card_id" value="{{ card.id }}">
+    <input type="hidden" name="rating" id="ex-rating-input" value="2">
+  </form>
+
+  {% if exercise_mode == 'cloze' %}
+  <!-- ════════════════════════════════════════════════════════════════════
+       MODO CLOZE — múltipla escolha (fase passiva)
+       ════════════════════════════════════════════════════════════════════ -->
+
   <!-- Sentence card -->
   <div class="bg-white rounded-3xl shadow-md border border-[#ABE5BC]/20 p-6 flex flex-col items-center gap-4">
     <p class="text-xs font-bold uppercase tracking-widest text-[#4abe74]">Preencha a lacuna</p>
+
+    {% if card.context_sentence %}
+    <p class="text-xs text-gray-400 italic text-center bg-gray-50 rounded-xl px-3 py-2 w-full">
+      💡 Contexto: {{ card.context_sentence }}
+    </p>
+    {% endif %}
+
     <p class="text-xl font-semibold text-center text-gray-800 leading-relaxed" id="ex-sentence">
       {{ cloze_before }}<span id="ex-blank"
             class="inline-block border-b-4 border-[#4abe74] min-w-[80px] mx-1 text-[#4abe74] italic font-bold
@@ -44,25 +67,95 @@
     VERIFICAR
   </button>
 
-  <!-- Hidden HTMX form (submitted by CONTINUAR) -->
-  <form id="ex-answer-form"
-        hx-post="{% url 'lesson_answer' trail.id lesson.id %}"
-        hx-target="#trail-exercise-area"
-        hx-swap="innerHTML"
-        class="hidden">
-    {% csrf_token %}
-    <input type="hidden" name="card_id" value="{{ card.id }}">
-    <input type="hidden" name="rating" id="ex-rating-input" value="2">
-  </form>
+  {% else %}
+  <!-- ════════════════════════════════════════════════════════════════════
+       MODO REVEAL — mostrar/revelar + auto-avaliação
+       (tradução, fase ativa, cards normais)
+       ════════════════════════════════════════════════════════════════════ -->
+
+  <!-- Phase badge -->
+  {% if is_active %}
+  <div class="flex justify-center">
+    <span class="inline-flex items-center gap-1.5 text-xs font-bold px-3 py-1 rounded-full
+                 bg-purple-100 text-purple-700 border border-purple-200">
+      ⚡ Fase Ativa — produza em inglês
+    </span>
+  </div>
+  {% endif %}
+
+  <!-- Prompt card -->
+  <div class="bg-white rounded-3xl shadow-md border border-[#ABE5BC]/20 p-6 flex flex-col items-center gap-3">
+    <p class="text-xs font-bold uppercase tracking-widest text-gray-400">{{ prompt_label }}</p>
+
+    {% if context_text %}
+    <p class="text-xs text-gray-400 italic text-center bg-gray-50 rounded-xl px-3 py-2 w-full">
+      💡 {{ context_text }}
+    </p>
+    {% endif %}
+
+    <p class="text-2xl font-semibold text-center text-gray-800 leading-relaxed">
+      {{ prompt_text }}
+    </p>
+
+    <!-- TTS button -->
+    <button onclick="exSpeak('{{ prompt_text|escapejs }}', '{{ card.deck.back_language }}')"
+            class="flex items-center gap-1.5 px-3 py-1.5 rounded-full border border-gray-200
+                   text-gray-500 hover:border-[#ABE5BC] hover:text-[#4abe74] transition-colors text-xs font-medium">
+      <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round"
+              d="M15.536 8.464a5 5 0 010 7.072M12 6v12M9.172 9.172a4 4 0 000 5.656"/>
+      </svg>
+      Ouvir
+    </button>
+  </div>
+
+  <!-- Reveal / answer panel (hidden until tapped) -->
+  <div id="ex-answer-panel" class="hidden bg-gradient-to-br from-[#ABE5BC]/10 to-white
+       rounded-3xl border border-[#ABE5BC]/30 p-5 flex flex-col items-center gap-3">
+    <p class="text-xs font-bold uppercase tracking-widest text-[#4abe74]">{{ answer_label }}</p>
+    <p class="text-2xl font-bold text-center text-gray-800">{{ answer_text }}</p>
+    <button onclick="exSpeak('{{ answer_text|escapejs }}', '{{ card.deck.front_language }}')"
+            class="flex items-center gap-1.5 px-3 py-1.5 rounded-full border border-[#ABE5BC]/60
+                   text-[#4abe74] hover:bg-[#ABE5BC]/20 transition-colors text-xs font-medium">
+      <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round"
+              d="M15.536 8.464a5 5 0 010 7.072M12 6v12M9.172 9.172a4 4 0 000 5.656"/>
+      </svg>
+      Ouvir resposta
+    </button>
+  </div>
+
+  <!-- Reveal button (hidden after reveal) -->
+  <button id="ex-reveal-btn"
+          onclick="exReveal()"
+          class="w-full py-4 rounded-2xl font-bold text-base bg-gradient-to-r
+                 from-[#ABE5BC] to-[#4abe74] text-white shadow-lg shadow-[#4abe74]/20
+                 active:scale-[0.98] transition-all">
+    Ver Resposta
+  </button>
+
+  <!-- Rating buttons (shown after reveal) -->
+  <div id="ex-rating-buttons" class="hidden grid grid-cols-2 gap-3">
+    <button onclick="exRate(0)"
+            class="py-4 rounded-2xl border-2 border-red-200 bg-red-50 text-red-600
+                   font-bold text-sm active:scale-[0.97] transition-all flex flex-col items-center gap-1">
+      <span class="text-xl">😰</span>
+      <span>Errei</span>
+    </button>
+    <button onclick="exRate(3)"
+            class="py-4 rounded-2xl border-2 border-[#ABE5BC] bg-[#ABE5BC]/10 text-green-700
+                   font-bold text-sm active:scale-[0.97] transition-all flex flex-col items-center gap-1">
+      <span class="text-xl">✅</span>
+      <span>Acertei</span>
+    </button>
+  </div>
+
+  {% endif %}
 
 </div>
 
-<!-- ── Feedback Bottom Sheet ─────────────────────────────────────────────── -->
+<!-- ── Feedback Bottom Sheet (cloze mode) ────────────────────────────────── -->
 <div id="ex-sheet" class="fixed inset-x-0 bottom-0 z-50 translate-y-full transition-transform duration-300 ease-out">
-  <!-- Backdrop -->
-  <div class="absolute inset-x-0 top-0 bottom-0 pointer-events-none"></div>
-
-  <!-- Sheet panel -->
   <div id="ex-sheet-panel" class="relative rounded-t-3xl px-6 pt-6 pb-10 shadow-2xl bg-white">
 
     <!-- Correct state -->
@@ -110,6 +203,17 @@
 
 <script>
 (function() {
+  // ── TTS ───────────────────────────────────────────────────────────────────
+  window.exSpeak = function(text, lang) {
+    if (!window.speechSynthesis) return;
+    window.speechSynthesis.cancel();
+    var utt = new SpeechSynthesisUtterance(text);
+    utt.lang  = lang || 'en-US';
+    utt.rate  = 0.85;
+    window.speechSynthesis.speak(utt);
+  };
+
+  // ── CLOZE MODE ────────────────────────────────────────────────────────────
   var _selected = null;
   var _correct  = document.getElementById('ex-verify-btn') ?
                   document.getElementById('ex-verify-btn').dataset.correct : '';
@@ -135,63 +239,86 @@
     if (!_selected) return;
     var isCorrect = _selected.trim().toLowerCase() === _correct.trim().toLowerCase();
 
-    // Fill blank
     var blank = document.getElementById('ex-blank');
     if (blank) {
       blank.textContent = _selected;
-      blank.className = blank.className.replace('text-[#4abe74]', isCorrect ? 'text-[#4abe74]' : 'text-red-500');
+      if (!isCorrect) {
+        blank.classList.replace('text-[#4abe74]', 'text-red-500');
+        blank.classList.replace('border-[#4abe74]', 'border-red-400');
+      }
     }
 
-    // Mark options
     document.querySelectorAll('.ex-option').forEach(function(b) {
       b.disabled = true;
       if (b.dataset.option.trim().toLowerCase() === _correct.trim().toLowerCase()) {
-        b.classList.remove('border-gray-200', 'bg-white', 'text-gray-800', 'border-[#4abe74]', 'bg-[#ABE5BC]/10');
         b.classList.add('border-[#4abe74]', 'bg-[#ABE5BC]/10', 'text-[#4abe74]');
       }
     });
 
-    // Hide verify btn
     var verifyBtn = document.getElementById('ex-verify-btn');
     if (verifyBtn) verifyBtn.classList.add('hidden');
 
-    // Show sheet
-    var sheet    = document.getElementById('ex-sheet');
-    var correct  = document.getElementById('ex-sheet-correct');
-    var wrong    = document.getElementById('ex-sheet-wrong');
-    var reveal   = document.getElementById('ex-correct-reveal');
+    var reveal = document.getElementById('ex-correct-reveal');
     if (reveal) reveal.textContent = _correct;
 
+    var sheet  = document.getElementById('ex-sheet');
+    var panel  = document.getElementById('ex-sheet-panel');
+    var elOk   = document.getElementById('ex-sheet-correct');
+    var elWrong = document.getElementById('ex-sheet-wrong');
+
     if (isCorrect) {
-      if (correct) correct.className = 'flex flex-col items-start gap-3';
-      if (wrong)   wrong.className   = 'hidden flex-col items-start gap-3';
+      if (elOk)    elOk.className   = 'flex flex-col items-start gap-3';
+      if (elWrong) elWrong.className = 'hidden flex-col items-start gap-3';
+      if (panel)   panel.style.background = '#f0fdf4';
       if (typeof playSound !== 'undefined') playSound('good');
     } else {
-      if (correct) correct.className = 'hidden flex-col items-start gap-3';
-      if (wrong)   wrong.className   = 'flex flex-col items-start gap-3';
+      if (elOk)    elOk.className   = 'hidden flex-col items-start gap-3';
+      if (elWrong) elWrong.className = 'flex flex-col items-start gap-3';
+      if (panel)   panel.style.background = '#fff1f2';
       if (typeof playSound !== 'undefined') playSound('wrong');
     }
-
-    if (sheet) {
-      sheet.style.transform = 'translateY(0)';
-      var panel = document.getElementById('ex-sheet-panel');
-      if (panel) {
-        panel.style.background = isCorrect ? '#f0fdf4' : '#fff1f2';
-      }
-    }
+    if (sheet) sheet.style.transform = 'translateY(0)';
   };
 
   window.exContinue = function(rating) {
     var input = document.getElementById('ex-rating-input');
     if (input) input.value = rating;
-
-    // Close sheet
     var sheet = document.getElementById('ex-sheet');
     if (sheet) sheet.style.transform = 'translateY(100%)';
-
-    // Submit via HTMX
     var form = document.getElementById('ex-answer-form');
     if (form) htmx.trigger(form, 'submit');
   };
+
+  // ── REVEAL MODE ───────────────────────────────────────────────────────────
+  window.exReveal = function() {
+    var panel   = document.getElementById('ex-answer-panel');
+    var revBtn  = document.getElementById('ex-reveal-btn');
+    var ratBtns = document.getElementById('ex-rating-buttons');
+    if (panel)   panel.classList.remove('hidden');
+    if (revBtn)  revBtn.classList.add('hidden');
+    if (ratBtns) ratBtns.classList.remove('hidden');
+    if (typeof playSound !== 'undefined') playSound('flip');
+  };
+
+  window.exRate = function(rating) {
+    var input = document.getElementById('ex-rating-input');
+    if (input) input.value = rating;
+    var form = document.getElementById('ex-answer-form');
+    if (form) htmx.trigger(form, 'submit');
+  };
+
+  // ── Keyboard shortcuts ────────────────────────────────────────────────────
+  document.addEventListener('keydown', function(e) {
+    if (e.key === ' ' || e.key === 'Enter') {
+      e.preventDefault();
+      var revBtn = document.getElementById('ex-reveal-btn');
+      if (revBtn && !revBtn.classList.contains('hidden')) { exReveal(); return; }
+      var verifyBtn = document.getElementById('ex-verify-btn');
+      if (verifyBtn && !verifyBtn.disabled) { exVerify(); return; }
+    }
+    // 1 = Errei, 2 = Acertei (reveal mode)
+    if (e.key === '1') { var ratBtns = document.getElementById('ex-rating-buttons'); if (ratBtns && !ratBtns.classList.contains('hidden')) exRate(0); }
+    if (e.key === '2') { var ratBtns = document.getElementById('ex-rating-buttons'); if (ratBtns && !ratBtns.classList.contains('hidden')) exRate(3); }
+  });
 })();
 </script>

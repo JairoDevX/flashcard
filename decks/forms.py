@@ -19,16 +19,22 @@ class DeckForm(forms.ModelForm):
 class CardForm(forms.ModelForm):
     class Meta:
         model = Card
-        fields = ('card_type', 'front', 'back', 'tags')
+        fields = ('card_type', 'front', 'back', 'context_sentence', 'tags')
         widgets = {
             'card_type': forms.Select(attrs={'id': 'id_card_type'}),
             'front': forms.Textarea(attrs={'rows': 3, 'placeholder': 'Frente do card (pergunta)', 'id': 'id_front'}),
             'back': forms.Textarea(attrs={'rows': 3, 'placeholder': 'Verso do card (resposta)'}),
+            'context_sentence': forms.Textarea(attrs={
+                'rows': 2,
+                'placeholder': 'Ex: "I go to the store every day." (opcional)',
+                'id': 'id_context_sentence',
+            }),
             'tags': forms.TextInput(attrs={'placeholder': 'Ex: verbo, gramática, básico'}),
         }
         labels = {
             'card_type': 'Tipo do Card',
             'front': 'Frente',
             'back': 'Verso',
+            'context_sentence': 'Frase de Contexto (opcional)',
             'tags': 'Tags (separadas por vírgula)',
         }

@@ -14,6 +14,8 @@ class Trail(models.Model):
         Deck, on_delete=models.SET_NULL,
         null=True, blank=True, related_name='trails'
     )
+    streak          = models.PositiveIntegerField(default=0)
+    last_lesson_date = models.DateField(null=True, blank=True)
     created_at  = models.DateTimeField(auto_now_add=True)
 
     class Meta:
@@ -33,11 +35,20 @@ class Trail(models.Model):
 
 
 class Lesson(models.Model):
-    trail      = models.ForeignKey(Trail, on_delete=models.CASCADE, related_name='lessons')
-    order      = models.PositiveIntegerField()
-    title      = models.CharField(max_length=200)
-    cards      = models.ManyToManyField(Card, blank=True, related_name='lessons')
-    xp_reward  = models.PositiveIntegerField(default=10)
+    PHASE_PASSIVE = 'passive'
+    PHASE_ACTIVE  = 'active'
+    PHASE_CHOICES = [
+        ('passive', 'Passiva – reconhecimento'),
+        ('active',  'Ativa – produção'),
+    ]
+
+    trail         = models.ForeignKey(Trail, on_delete=models.CASCADE, related_name='lessons')
+    order         = models.PositiveIntegerField()
+    title         = models.CharField(max_length=200)
+    cards         = models.ManyToManyField(Card, blank=True, related_name='lessons')
+    xp_reward     = models.PositiveIntegerField(default=10)
+    phase         = models.CharField(max_length=10, choices=PHASE_CHOICES, default=PHASE_PASSIVE)
+    grammar_notes = models.TextField(blank=True, help_text='Notas de gramática exibidas ao fim da lição.')
 
     class Meta:
         ordering = ['order']

@@ -22,10 +22,18 @@
              style="width: {{ progress_pct }}%"></div>
       </div>
 
-      <!-- XP pill -->
-      <div class="flex items-center gap-1 bg-[#FFD787]/20 rounded-full px-3 py-1">
-        <span class="text-xs">⚡</span>
-        <span class="text-xs font-bold text-amber-600">{{ lesson.xp_reward }} XP</span>
+      <!-- Phase + XP pill -->
+      <div class="flex items-center gap-2">
+        {% if lesson.phase == 'active' %}
+        <div class="flex items-center gap-1 bg-purple-100 rounded-full px-2.5 py-1">
+          <span class="text-xs">⚡</span>
+          <span class="text-xs font-bold text-purple-700">Ativa</span>
+        </div>
+        {% endif %}
+        <div class="flex items-center gap-1 bg-[#FFD787]/20 rounded-full px-3 py-1">
+          <span class="text-xs">⚡</span>
+          <span class="text-xs font-bold text-amber-600">{{ lesson.xp_reward }} XP</span>
+        </div>
       </div>
     </div>
   </div>

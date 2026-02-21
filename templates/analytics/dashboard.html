@@ -69,7 +69,74 @@
         <p class="text-xs text-gray-400">aprendidos de {{ total_cards }}</p>
       </div>
 
+      <div class="bg-white rounded-2xl p-4 shadow-sm border border-blue-100">
+        <div class="flex items-center gap-2 mb-2">
+          <span class="text-2xl">🧠</span>
+          <span class="text-xs text-gray-400 font-medium">Consolidados</span>
+        </div>
+        <p class="text-3xl font-bold text-gray-800">{{ consolidated }}</p>
+        <p class="text-xs text-gray-400">ease ≥ 2.0 (longa retenção)</p>
+      </div>
+
+      <div class="bg-white rounded-2xl p-4 shadow-sm border border-[#CFADE8]/20">
+        <div class="flex items-center gap-2 mb-2">
+          <span class="text-2xl">📈</span>
+          <span class="text-xs text-gray-400 font-medium">Retenção 30d</span>
+        </div>
+        <p class="text-3xl font-bold text-gray-800">{{ retention_30 }}<span class="text-lg text-gray-400">%</span></p>
+        <div class="h-1.5 bg-gray-100 rounded-full mt-2 overflow-hidden">
+          <div class="h-full rounded-full
+                      {% if retention_30 >= 80 %}bg-gradient-to-r from-[#ABE5BC] to-[#4abe74]
+                      {% elif retention_30 >= 60 %}bg-gradient-to-r from-[#FFD787] to-[#FFA776]
+                      {% else %}bg-gradient-to-r from-red-300 to-red-400{% endif %}"
+               style="width: {{ retention_30 }}%"></div>
+        </div>
+      </div>
+
     </div>
+
+    <!-- ── Breakdown por idioma ────────────────────────────────────────────── -->
+    {% if language_data %}
+    <div class="bg-white rounded-2xl shadow-sm border border-gray-100 p-5">
+      <h2 class="text-sm font-semibold text-gray-600 mb-4 flex items-center gap-2">
+        🌍 Progresso por Idioma
+      </h2>
+      <div class="space-y-3">
+        {% for lang in language_data %}
+        <div>
+          <div class="flex justify-between text-sm mb-1">
+            <span class="font-medium text-gray-700">{{ lang.name }}</span>
+            <span class="text-gray-400 text-xs">{{ lang.learned }}/{{ lang.cards }} ({{ lang.pct }}%)</span>
+          </div>
+          <div class="h-2.5 bg-gray-100 rounded-full overflow-hidden">
+            <div class="h-full bg-gradient-to-r from-[#ABE5BC] to-[#4abe74] rounded-full"
+                 style="width: {{ lang.pct }}%"></div>
+          </div>
+        </div>
+        {% endfor %}
+      </div>
+    </div>
+    {% endif %}
+
+    <!-- ── Streaks por trilha ──────────────────────────────────────────────── -->
+    {% if trail_streaks %}
+    <div class="bg-white rounded-2xl shadow-sm border border-[#FFD787]/20 p-5">
+      <h2 class="text-sm font-semibold text-gray-600 mb-3 flex items-center gap-2">
+        🔥 Sequências por Trilha
+      </h2>
+      <div class="space-y-2">
+        {% for t in trail_streaks %}
+        <div class="flex items-center justify-between py-1">
+          <span class="text-sm text-gray-700">{{ t.icon }} {{ t.name }}</span>
+          <div class="flex items-center gap-1 bg-[#FFD787]/20 rounded-full px-2.5 py-0.5">
+            <span class="text-sm">🔥</span>
+            <span class="text-xs font-bold text-amber-600">{{ t.streak }} dia{{ t.streak|pluralize:"s" }}</span>
+          </div>
+        </div>
+        {% endfor %}
+      </div>
+    </div>
+    {% endif %}
 
     <!-- ── 7-day bar chart ─────────────────────────────────────────────────── -->
     <div class="bg-white rounded-2xl shadow-sm border border-gray-100 p-5">

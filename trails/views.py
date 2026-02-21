@@ -1,5 +1,6 @@
 import re
 import random
+from datetime import date, timedelta
 
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
@@ -13,6 +14,8 @@ from .models import Trail, Lesson, LessonProgress
 from decks.models import Card, Deck
 
 LESSON_SIZE = 6
+# Lições acima deste índice (base-1) entram em fase ativa (produção)
+ACTIVE_PHASE_FROM = 7
 LESSON_TITLES = [
     'Introdução', 'Fundamentos', 'Intermediário', 'Avançado',
     'Especialista', 'Mestre', 'Lendário', 'Supremo',
@@ -22,10 +25,11 @@ LESSON_TITLES = [
 # ── Helpers ───────────────────────────────────────────────────────────────────
 
 def _build_cloze_context(card):
-    """Generate multiple-choice options for a cloze card."""
+    """Generate multiple-choice options for a cloze card (fase passiva)."""
     match = re.search(r'\{\{([^}]+)\}\}', card.front)
     if not match:
         return {
+            'exercise_mode': 'cloze',
             'cloze_correct': '',
             'cloze_before': card.front,
             'cloze_after': '',
@@ -55,7 +59,6 @@ def _build_cloze_context(card):
     random.shuffle(unique)
     distractors = unique[:3]
 
-    # pad with generic fillers if deck is small
     fillers = ['era', 'tiene', 'está', 'hace', 'van', 'son', 'fue', 'hay',
                'under', 'over', 'runs', 'eats']
     for f in fillers:
@@ -69,10 +72,39 @@ def _build_cloze_context(card):
     random.shuffle(options)
 
     return {
+        'exercise_mode': 'cloze',
         'cloze_correct': correct,
         'cloze_before': before,
         'cloze_after': after,
         'cloze_options': options,
+    }
+
+
+def _build_reveal_context(card, active_phase=False):
+    """
+    Build context for reveal-and-rate exercises.
+
+    - translation cards (fase passiva): mostra back (PT), revela front (EN).
+    - fase ativa (qualquer tipo): mesmo comportamento — produção PT→EN.
+    - normal cards (fase passiva): mostra front (EN), revela back (PT).
+    """
+    if active_phase or card.card_type == Card.CARD_TYPE_TRANSLATION:
+        return {
+            'exercise_mode': 'reveal',
+            'prompt_text':   card.back,
+            'prompt_label':  'Traduza para o inglês:',
+            'answer_text':   card.front,
+            'answer_label':  'Resposta em inglês',
+            'context_text':  card.context_sentence,
+        }
+    # normal card, fase passiva
+    return {
+        'exercise_mode': 'reveal',
+        'prompt_text':   card.front,
+        'prompt_label':  'Qual a tradução / resposta?',
+        'answer_text':   card.back,
+        'answer_label':  'Resposta',
+        'context_text':  card.context_sentence,
     }
 
 
@@ -146,11 +178,13 @@ def trail_create(request):
     chunks = [cloze_cards[i:i + LESSON_SIZE] for i in range(0, len(cloze_cards), LESSON_SIZE)]
     for idx, chunk in enumerate(chunks, start=1):
         title  = LESSON_TITLES[idx - 1] if idx <= len(LESSON_TITLES) else f'Lição {idx}'
+        phase  = Lesson.PHASE_ACTIVE if idx > ACTIVE_PHASE_FROM else Lesson.PHASE_PASSIVE
         lesson = Lesson.objects.create(
             trail=trail,
             order=idx,
             title=title,
             xp_reward=10 * idx,
+            phase=phase,
         )
         lesson.cards.set(chunk)
 
@@ -217,6 +251,7 @@ def lesson_session(request, trail_id, lesson_id):
     total = request.session.get(keys['total'], len(queue_ids))
     done  = request.session.get(keys['done'], 0)
 
+    is_active = (lesson.phase == Lesson.PHASE_ACTIVE)
     context = {
         'trail':        trail,
         'lesson':       lesson,
@@ -225,8 +260,12 @@ def lesson_session(request, trail_id, lesson_id):
         'total':        total,
         'remaining':    len(queue_ids),
         'progress_pct': int(done / total * 100) if total else 0,
+        'is_active':    is_active,
     }
-    context.update(_build_cloze_context(card))
+    if card.card_type == Card.CARD_TYPE_CLOZE and not is_active:
+        context.update(_build_cloze_context(card))
+    else:
+        context.update(_build_reveal_context(card, active_phase=is_active))
     return render(request, 'trails/session.html', context)
 
 
@@ -273,6 +312,7 @@ def lesson_answer(request, trail_id, lesson_id):
 
     next_card = get_object_or_404(Card, id=queue_ids[0])
     total     = request.session.get(keys['total'], done)
+    is_active = (lesson.phase == Lesson.PHASE_ACTIVE)
 
     context = {
         'trail':        trail,
@@ -282,8 +322,12 @@ def lesson_answer(request, trail_id, lesson_id):
         'total':        total,
         'remaining':    len(queue_ids),
         'progress_pct': int(done / total * 100) if total else 0,
+        'is_active':    is_active,
     }
-    context.update(_build_cloze_context(next_card))
+    if next_card.card_type == Card.CARD_TYPE_CLOZE and not is_active:
+        context.update(_build_cloze_context(next_card))
+    else:
+        context.update(_build_reveal_context(next_card, active_phase=is_active))
     return render(request, 'trails/partials/exercise.html', context)
 
 
@@ -314,12 +358,26 @@ def lesson_complete(request, trail_id, lesson_id):
         progress.completed_at = timezone.now()
         progress.save()
 
+    # ── Atualizar streak da trilha ────────────────────────────────────────
+    today = date.today()
+    trail_obj = Trail.objects.get(pk=trail.pk)
+    if trail_obj.last_lesson_date == today:
+        pass  # já estudou hoje, mantém streak
+    elif trail_obj.last_lesson_date == today - timedelta(days=1):
+        trail_obj.streak += 1
+        trail_obj.last_lesson_date = today
+        trail_obj.save()
+    else:
+        trail_obj.streak = 1
+        trail_obj.last_lesson_date = today
+        trail_obj.save()
+
     next_lesson = Lesson.objects.filter(
         trail=trail, order=lesson.order + 1
     ).first()
 
     return render(request, 'trails/complete.html', {
-        'trail':       trail,
+        'trail':       trail_obj,
         'lesson':      lesson,
         'total':       done,
         'correct':     correct,

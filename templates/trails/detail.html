@@ -17,6 +17,12 @@
         <h1 class="text-base font-bold text-gray-800">{{ trail.icon }} {{ trail.name }}</h1>
         <p class="text-xs text-gray-400">{{ completed }}/{{ total }} lições concluídas</p>
       </div>
+      {% if trail.streak > 0 %}
+      <div class="flex items-center gap-1 bg-[#FFD787]/20 rounded-full px-3 py-1.5">
+        <span class="text-sm">🔥</span>
+        <span class="text-xs font-bold text-amber-600">{{ trail.streak }}</span>
+      </div>
+      {% endif %}
     </div>
 
     <!-- Overall progress bar -->
@@ -81,9 +87,14 @@
           <span class="text-xs font-semibold text-amber-600 text-center leading-tight max-w-[80px]">
             {{ lesson.title }}
           </span>
-          <span class="text-[10px] bg-[#FFD787]/30 text-amber-700 px-2 py-0.5 rounded-full font-medium">
-            {{ ld.card_count }} cards
-          </span>
+          <div class="flex gap-1 flex-wrap justify-center">
+            <span class="text-[10px] bg-[#FFD787]/30 text-amber-700 px-2 py-0.5 rounded-full font-medium">
+              {{ ld.card_count }} cards
+            </span>
+            {% if lesson.phase == 'active' %}
+            <span class="text-[10px] bg-purple-100 text-purple-600 px-2 py-0.5 rounded-full font-medium">⚡ Ativa</span>
+            {% endif %}
+          </div>
         </a>
 
       {% else %}

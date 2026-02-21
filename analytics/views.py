@@ -1,10 +1,11 @@
 from datetime import date, timedelta
+from collections import defaultdict
 
 from django.contrib.auth.decorators import login_required
 from django.shortcuts import render
 
 from study.models import ReviewLog, CardSchedule
-from decks.models import Card
+from decks.models import Card, Deck, LANGUAGE_CHOICES
 
 
 @login_required
@@ -24,7 +25,21 @@ def analytics_dashboard(request):
         state=CardSchedule.STATE_REVIEW,
     ).count()
 
-    # ── Streak ───────────────────────────────────────────────────────────────
+    # Cards consolidados: state=REVIEW com ease_factor >= 2.0
+    consolidated = CardSchedule.objects.filter(
+        card__deck__user=user,
+        state=CardSchedule.STATE_REVIEW,
+        ease_factor__gte=2.0,
+    ).count()
+
+    # ── Retenção últimos 30 dias ─────────────────────────────────────────────
+    thirty_ago = today - timedelta(days=30)
+    reviews_30 = ReviewLog.objects.filter(user=user, reviewed_at__date__gte=thirty_ago)
+    reviews_30_count = reviews_30.count()
+    correct_30 = reviews_30.filter(was_correct=True).count()
+    retention_30 = int(correct_30 / reviews_30_count * 100) if reviews_30_count else 0
+
+    # ── Streak de revisões (dias consecutivos) ───────────────────────────────
     streak = 0
     d = today
     while True:
@@ -33,6 +48,37 @@ def analytics_dashboard(request):
             d -= timedelta(days=1)
         else:
             break
+
+    # ── Breakdown por idioma ─────────────────────────────────────────────────
+    lang_map = dict(LANGUAGE_CHOICES)
+    decks = Deck.objects.filter(user=user)
+    lang_stats = defaultdict(lambda: {'cards': 0, 'learned': 0})
+    for deck in decks:
+        lang = deck.front_language
+        lang_stats[lang]['cards'] += deck.cards.count()
+        lang_stats[lang]['learned'] += CardSchedule.objects.filter(
+            card__deck=deck, state=CardSchedule.STATE_REVIEW
+        ).count()
+    language_data = [
+        {
+            'code':    lang,
+            'name':    lang_map.get(lang, lang),
+            'cards':   stats['cards'],
+            'learned': stats['learned'],
+            'pct':     int(stats['learned'] / stats['cards'] * 100) if stats['cards'] else 0,
+        }
+        for lang, stats in lang_stats.items()
+        if stats['cards'] > 0
+    ]
+    language_data.sort(key=lambda x: x['learned'], reverse=True)
+
+    # ── Streak por trilha ────────────────────────────────────────────────────
+    from trails.models import Trail
+    trail_streaks = list(
+        Trail.objects.filter(user=user, streak__gt=0)
+        .order_by('-streak')
+        .values('name', 'streak', 'icon')[:5]
+    )
 
     # ── 7-day daily chart ────────────────────────────────────────────────────
     daily_data = []
@@ -57,15 +103,19 @@ def analytics_dashboard(request):
     ).count()
 
     return render(request, 'analytics/dashboard.html', {
-        'total_reviews': total_reviews,
-        'today_reviews': today_reviews,
-        'accuracy': accuracy,
-        'total_cards': total_cards,
-        'learned_cards': learned_cards,
-        'streak': streak,
-        'daily_data': daily_data,
-        'max_count': max_count,
-        'due_tomorrow': due_tomorrow,
+        'total_reviews':  total_reviews,
+        'today_reviews':  today_reviews,
+        'accuracy':       accuracy,
+        'total_cards':    total_cards,
+        'learned_cards':  learned_cards,
+        'consolidated':   consolidated,
+        'retention_30':   retention_30,
+        'streak':         streak,
+        'daily_data':     daily_data,
+        'max_count':      max_count,
+        'due_tomorrow':   due_tomorrow,
+        'language_data':  language_data,
+        'trail_streaks':  trail_streaks,
     })
 
 
